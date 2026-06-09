@@ -34,8 +34,9 @@ function App() {
   }, [])
 
   useEffect(() => {
-    bridge.send('VKWebAppInit')
-    bridge.send('VKWebAppGetUserInfo')
+    const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
+    try { bridge.send('VKWebAppInit') } catch {}
+    Promise.race([bridge.send('VKWebAppGetUserInfo'), timeout(5000)])
       .then((u) => {
         setVkUser(u)
         return api.me(u.id)
