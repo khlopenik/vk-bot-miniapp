@@ -262,10 +262,11 @@ function TopBar({ me, onGoTariffs }) {
   )
 }
 
-/* ── Маппинг качество → ключ модели ── */
-const QUALITY_MODEL = { std: 'nb_edit', v2: 'nb2_edit', pro: 'nbpro_edit' }
+/* ── Маппинг качество → ключ модели VK бота ── */
+const QUALITY_MODEL  = { std: 'std', v2: 'v2', pro: 'pro' }
 const QUALITY_CREDIT = { std: 'std_credits', v2: 'v2_credits', pro: 'pro_credits' }
-const QUALITY_LABEL = { std: '⭐ Стандарт', v2: '✨ Версия 2', pro: '💎 Про' }
+const QUALITY_LABEL  = { std: '⭐ Стандарт', v2: '✨ Версия 2', pro: '💎 Про' }
+const QUALITY_DIA    = { std: 79, v2: 99, pro: 149 }
 
 /* ────────────────────────────── ГАЛЕРЕЙНАЯ ГЕНЕРАЦИЯ ── */
 function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToast }) {
@@ -386,7 +387,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
         {qualities.map(q => {
           const ckey = QUALITY_CREDIT[q]
           const cnt  = me?.[ckey] ?? 0
-          const hasDia = me?.diamond_credits >= { std:79, v2:99, pro:149 }[q]
+          const hasDia = me?.diamond_credits >= QUALITY_DIA[q]
           const ok = cnt > 0 || hasDia
           return (
             <button
@@ -400,7 +401,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
           )
         })}
       </div>
-      {credits === 0 && diamond < {std:79,v2:99,pro:149}[quality] && (
+      {credits === 0 && diamond < QUALITY_DIA[quality] && (
         <div style={{fontSize:12,color:'#ef4444',marginTop:8,textAlign:'center'}}>
           Нет кредитов {QUALITY_LABEL[quality]} — <span style={{color:'#a78bfa',cursor:'pointer'}} onClick={onGoTariffs}>пополнить →</span>
         </div>
