@@ -249,6 +249,26 @@ function TopBar({ me, onGoTariffs }) {
 
 /* ────────────────────────────────── НОВИЧОК ── */
 function NovichokTab({ me, onGoProfi, onGoTariffs }) {
+  const [categories, setCategories]   = useState(CATEGORIES) // fallback — static
+  const [activecat, setActivecat]     = useState('all')
+  const [styles, setStyles]           = useState([])
+  const [loadingStyles, setLoadingStyles] = useState(false)
+
+  // Загружаем категории из Supabase при монтировании
+  useEffect(() => {
+    api.categories().then((cats) => {
+      if (cats && cats.length > 0) setCategories(cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name })))
+    }).catch(() => {})
+  }, [])
+
+  // Загружаем стили при смене категории
+  useEffect(() => {
+    setLoadingStyles(true)
+    api.styles(activecat).then((data) => {
+      setStyles(Array.isArray(data) ? data : [])
+    }).catch(() => setStyles([])).finally(() => setLoadingStyles(false))
+  }, [activecat])
+
   return (
     <>
       <TopBar me={me} onGoTariffs={onGoTariffs} />
@@ -259,32 +279,73 @@ function NovichokTab({ me, onGoProfi, onGoTariffs }) {
         <button className="diamond-topup" onClick={onGoTariffs}>Пополнить ▸</button>
       </div>
 
+      {/* Категории */}
       <div className="cat-grid" id="cats">
-        {CATEGORIES.map((c) => (
-          <div key={c.key} className="cat-btn" onClick={() => onGoProfi({ prompt: c.label })}>
+        <div
+          className={`cat-btn${activecat === 'all' ? ' active' : ''}`}
+          onClick={() => setActivecat('all')}
+        >
+          <span className="cat-icon">🌟</span>
+          <span className="cat-name">Все</span>
+        </div>
+        {categories.map((c) => (
+          <div
+            key={c.key}
+            className={`cat-btn${activecat === c.key ? ' active' : ''}`}
+            onClick={() => setActivecat(c.key)}
+          >
             <span className="cat-icon">{c.emoji}</span>
             <span className="cat-name">{c.label}</span>
           </div>
         ))}
       </div>
 
-      <div className="sec-title">⭐ Хиты</div>
-      <div className="sec-sub">Нажми «Повторить» — загрузишь своё фото</div>
-      <div className="grid">
-        {HITS.map((h) => (
-          <div key={h.title} className="card">
-            <div className="card-img-wrap">
-              <div className="card-no-img">🪄</div>
-              <div className="card-overlay">
-                <div className="card-name-ov">{h.title}</div>
+      {/* Стили из галереи */}
+      {loadingStyles ? (
+        <div style={{ textAlign: 'center', color: '#666', padding: '40px 0' }}>Загрузка...</div>
+      ) : styles.length > 0 ? (
+        <>
+          <div className="sec-title">✨ Стили</div>
+          <div className="sec-sub">Нажми «Повторить» — загрузишь своё фото</div>
+          <div className="grid">
+            {styles.map((s) => (
+              <div key={s.id} className="card">
+                <div className="card-img-wrap">
+                  {s.photo_url
+                    ? <img src={s.photo_url} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} />
+                    : <div className="card-no-img">🪄</div>
+                  }
+                  <div className="card-overlay">
+                    <div className="card-name-ov">{s.name}</div>
+                  </div>
+                  <div className="badge-hot">⭐ ХИТ</div>
+                </div>
+                <button className="card-btn" onClick={() => onGoProfi({ prompt: s.prompt || s.name, styleId: s.id })}>✨ Повторить</button>
               </div>
-              <div className="badge-hot">⭐ ХИТ</div>
-              <div className="badge-input">{h.desc}</div>
-            </div>
-            <button className="card-btn" onClick={() => onGoProfi({ prompt: h.prompt })}>✨ Повторить</button>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      ) : (
+        <>
+          <div className="sec-title">⭐ Хиты</div>
+          <div className="sec-sub">Нажми «Повторить» — загрузишь своё фото</div>
+          <div className="grid">
+            {HITS.map((h) => (
+              <div key={h.title} className="card">
+                <div className="card-img-wrap">
+                  <div className="card-no-img">🪄</div>
+                  <div className="card-overlay">
+                    <div className="card-name-ov">{h.title}</div>
+                  </div>
+                  <div className="badge-hot">⭐ ХИТ</div>
+                  <div className="badge-input">{h.desc}</div>
+                </div>
+                <button className="card-btn" onClick={() => onGoProfi({ prompt: h.prompt })}>✨ Повторить</button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <div style={{ height: 24 }} />
     </>
   )

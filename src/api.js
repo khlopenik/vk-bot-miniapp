@@ -21,4 +21,7 @@ export const api = {
   pay: (vk_id, tariff) => req('/pay', { method: 'POST', body: JSON.stringify({ vk_id, tariff }) }),
   generate: (vk_id, photo_url, model_key, prompt) =>
     req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt }) }),
+  categories: () => req('/categories'),
+  styles: (category_key) => req(`/styles/${category_key}`),
+  styleOne: (style_id) => req(`/style-one/${style_id}`),
 }

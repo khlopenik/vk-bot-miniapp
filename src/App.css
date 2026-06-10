@@ -102,6 +102,7 @@ html, body, #root {
   cursor: pointer; transition: all .2s; color: #777;
 }
 .cat-btn:active { transform: scale(.95); }
+.cat-btn.active { border-color: var(--purple); background: rgba(124,58,237,.18); color: #c4b5fd; }
 .cat-icon { font-size: 16px; line-height: 1; }
 .cat-name { font-size: 10px; font-weight: 700; text-align: center; line-height: 1.2; }
 
