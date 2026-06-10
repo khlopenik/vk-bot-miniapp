@@ -1,15 +1,17 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import bridge from '@vkontakte/vk-bridge'
 import {
   AdaptivityProvider, AppRoot, SplitLayout, SplitCol,
-  View, Panel, PanelHeader, Group, Cell, Avatar,
+  View, Panel, PanelHeader, PanelHeaderBack, Group, Cell, Avatar,
   Button, Spinner, Placeholder, Div, Header,
-  Tabbar, TabbarItem, FormItem, Input, Textarea,
-  Card, Image as VKImage, FixedLayout,
+  Tabbar, TabbarItem, FormItem, Textarea,
+  Card, Image as VKImage, FixedLayout, SimpleCell, Banner,
+  MiniInfoCell, CardGrid, ContentCard,
 } from '@vkontakte/vkui'
 import {
   Icon28UserOutline, Icon28PaymentCardOutline,
   Icon28PicturePlusOutline, Icon28ListOutline, Icon28InfoOutline,
+  Icon28CameraOutline, Icon28ChevronRightOutline,
 } from '@vkontakte/icons'
 import { api } from './api'
 import './App.css'
@@ -22,9 +24,15 @@ const CREDIT_LABELS = [
   ['gift_credits', '🎁 Подарочные'],
 ]
 
-function App() {
+function totalCredits(me) {
+  if (!me) return 0
+  return (me.std_credits || 0) + (me.v2_credits || 0) + (me.pro_credits || 0) + (me.gift_credits || 0)
+}
+
+export default function App() {
   const [vkUser, setVkUser] = useState(null)
-  const [activeTab, setActiveTab] = useState('home')
+  const [activePanel, setActivePanel] = useState('home')
+  const [history, setHistory] = useState(['home'])
   const [me, setMe] = useState(null)
   const [loadingMe, setLoadingMe] = useState(true)
 
@@ -37,73 +45,100 @@ function App() {
     const timeout = (ms) => new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
     try { bridge.send('VKWebAppInit') } catch {}
     Promise.race([bridge.send('VKWebAppGetUserInfo'), timeout(5000)])
-      .then((u) => {
-        setVkUser(u)
-        return api.me(u.id)
-      })
+      .then((u) => { setVkUser(u); return api.me(u.id) })
       .then((m) => setMe(m))
       .catch((e) => console.error('init error', e))
       .finally(() => setLoadingMe(false))
   }, [])
 
+  const go = useCallback((panel) => {
+    setHistory((h) => [...h, panel])
+    setActivePanel(panel)
+  }, [])
+
+  const goBack = useCallback(() => {
+    setHistory((h) => {
+      const next = h.slice(0, -1)
+      setActivePanel(next[next.length - 1] || 'home')
+      return next
+    })
+  }, [])
+
+  // tab navigation resets history
+  const goTab = useCallback((panel) => {
+    setHistory([panel])
+    setActivePanel(panel)
+  }, [])
+
   const vkId = vkUser?.id
+  const canGoBack = history.length > 1
+
+  const tabItems = [
+    { id: 'home', label: 'Главная', icon: <Icon28UserOutline /> },
+    { id: 'generate', label: 'Генерация', icon: <Icon28PicturePlusOutline /> },
+    { id: 'balance', label: 'Баланс', icon: <Icon28PaymentCardOutline /> },
+    { id: 'history', label: 'История', icon: <Icon28ListOutline /> },
+    { id: 'about', label: 'О боте', icon: <Icon28InfoOutline /> },
+  ]
+
+  const mainTabs = ['home', 'generate', 'balance', 'history', 'about']
+  const activeTab = mainTabs.includes(activePanel) ? activePanel
+    : mainTabs.includes(history.find(h => mainTabs.includes(h))) ? history.find(h => mainTabs.includes(h)) : 'home'
 
   return (
     <AdaptivityProvider>
       <AppRoot>
-        <SplitLayout header={<PanelHeader delimiter="none" />}>
+        <SplitLayout>
           <SplitCol autoSpaced>
-            <View activePanel={activeTab}>
+            <View activePanel={activePanel} history={history} onSwipeBack={goBack}>
+
               <Panel id="home">
-                <PanelHeader>FRAME — AI фотосессии</PanelHeader>
-                <HomePanel vkUser={vkUser} me={me} loading={loadingMe} go={setActiveTab} />
+                <PanelHeader>FRAME</PanelHeader>
+                <HomePanel vkUser={vkUser} me={me} loading={loadingMe} go={go} />
               </Panel>
 
               <Panel id="generate">
-                <PanelHeader>Генерация фото</PanelHeader>
-                <GeneratePanel vkId={vkId} onDone={() => refreshMe(vkId)} />
+                <PanelHeader before={canGoBack && activePanel === 'generate' ? <PanelHeaderBack onClick={goBack} /> : null}>
+                  Генерация фото
+                </PanelHeader>
+                <GeneratePanel vkId={vkId} onDone={() => refreshMe(vkId)} go={go} goBack={goBack} />
               </Panel>
 
               <Panel id="balance">
-                <PanelHeader>Баланс</PanelHeader>
-                <BalancePanel me={me} loading={loadingMe} />
+                <PanelHeader before={canGoBack && activePanel === 'balance' ? <PanelHeaderBack onClick={goBack} /> : null}>
+                  Баланс
+                </PanelHeader>
+                <BalancePanel me={me} loading={loadingMe} go={go} />
               </Panel>
 
               <Panel id="tariffs">
-                <PanelHeader>Купить кредиты</PanelHeader>
+                <PanelHeader before={<PanelHeaderBack onClick={goBack} />}>Купить кредиты</PanelHeader>
                 <TariffsPanel vkId={vkId} />
               </Panel>
 
               <Panel id="history">
-                <PanelHeader>История</PanelHeader>
+                <PanelHeader before={canGoBack && activePanel === 'history' ? <PanelHeaderBack onClick={goBack} /> : null}>
+                  История
+                </PanelHeader>
                 <HistoryPanel vkId={vkId} />
               </Panel>
 
               <Panel id="about">
-                <PanelHeader>О боте</PanelHeader>
+                <PanelHeader>О приложении</PanelHeader>
                 <AboutPanel />
               </Panel>
+
             </View>
           </SplitCol>
         </SplitLayout>
 
         <FixedLayout vertical="bottom">
           <Tabbar>
-            <TabbarItem selected={activeTab === 'home'} onClick={() => setActiveTab('home')} text="Главная">
-              <Icon28UserOutline />
-            </TabbarItem>
-            <TabbarItem selected={activeTab === 'generate'} onClick={() => setActiveTab('generate')} text="Генерация">
-              <Icon28PicturePlusOutline />
-            </TabbarItem>
-            <TabbarItem selected={activeTab === 'balance'} onClick={() => setActiveTab('balance')} text="Баланс">
-              <Icon28PaymentCardOutline />
-            </TabbarItem>
-            <TabbarItem selected={activeTab === 'history'} onClick={() => setActiveTab('history')} text="История">
-              <Icon28ListOutline />
-            </TabbarItem>
-            <TabbarItem selected={activeTab === 'about'} onClick={() => setActiveTab('about')} text="О боте">
-              <Icon28InfoOutline />
-            </TabbarItem>
+            {tabItems.map(({ id, label, icon }) => (
+              <TabbarItem key={id} selected={activeTab === id} onClick={() => goTab(id)} text={label}>
+                {icon}
+              </TabbarItem>
+            ))}
           </Tabbar>
         </FixedLayout>
       </AppRoot>
@@ -113,41 +148,65 @@ function App() {
 
 function HomePanel({ vkUser, me, loading, go }) {
   return (
-    <Group>
+    <>
       {vkUser && (
-        <Cell before={<Avatar src={vkUser.photo_200} />} subtitle="Добро пожаловать в FRAME!">
-          {vkUser.first_name} {vkUser.last_name}
-        </Cell>
+        <Group>
+          <SimpleCell
+            before={<Avatar src={vkUser.photo_200} size={48} />}
+            subtitle={loading ? 'Загрузка...' : `${totalCredits(me)} фото доступно`}
+          >
+            {vkUser.first_name} {vkUser.last_name}
+          </SimpleCell>
+        </Group>
       )}
-      <Div>
-        <Placeholder
-          icon={<span style={{ fontSize: 48 }}>🪄</span>}
-          header="AI-фотосессии прямо здесь"
+
+      <Group>
+        <Banner
+          before={<span style={{ fontSize: 40 }}>🪄</span>}
+          header="AI-фотосессии"
+          subheader="Загрузи фото — нейросеть создаст стильные кадры за пару минут"
+          actions={
+            <Button size="l" onClick={() => go('generate')}>
+              Начать генерацию
+            </Button>
+          }
+        />
+      </Group>
+
+      <Group header={<Header>Быстрые действия</Header>}>
+        <SimpleCell
+          before={<Icon28PicturePlusOutline />}
+          after={<Icon28ChevronRightOutline />}
+          onClick={() => go('generate')}
         >
-          Загрузи своё фото — нейросеть создаст стильные кадры за пару минут
-        </Placeholder>
-      </Div>
-      <Div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Button size="l" stretched onClick={() => go('generate')}>📸 Начать генерацию</Button>
-        <Button size="l" stretched mode="secondary" onClick={() => go('balance')}>
-          💳 Баланс {me ? `· ${totalCredits(me)} фото` : ''}
-        </Button>
-        <Button size="l" stretched mode="outline" onClick={() => go('tariffs')}>🛒 Купить кредиты</Button>
-      </Div>
-    </Group>
+          📸 Генерация фото
+        </SimpleCell>
+        <SimpleCell
+          before={<Icon28PaymentCardOutline />}
+          after={<Icon28ChevronRightOutline />}
+          subtitle={me ? `${totalCredits(me)} фото` : ''}
+          onClick={() => go('balance')}
+        >
+          💳 Мой баланс
+        </SimpleCell>
+        <SimpleCell
+          before={<Icon28PaymentCardOutline />}
+          after={<Icon28ChevronRightOutline />}
+          onClick={() => go('tariffs')}
+        >
+          🛒 Купить кредиты
+        </SimpleCell>
+      </Group>
+    </>
   )
 }
 
-function totalCredits(me) {
-  if (!me) return 0
-  return (me.std_credits || 0) + (me.v2_credits || 0) + (me.pro_credits || 0) + (me.gift_credits || 0)
-}
-
-function GeneratePanel({ vkId, onDone }) {
-  const [step, setStep] = useState('photo') // photo -> model -> prompt -> result
+function GeneratePanel({ vkId, onDone, go, goBack }) {
+  const [step, setStep] = useState('photo')
   const [photoUrl, setPhotoUrl] = useState('')
   const [models, setModels] = useState(null)
   const [modelKey, setModelKey] = useState(null)
+  const [modelLabel, setModelLabel] = useState('')
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -157,7 +216,7 @@ function GeneratePanel({ vkId, onDone }) {
 
   const reset = () => {
     setStep('photo'); setPhotoUrl(''); setModelKey(null)
-    setPrompt(''); setError(null); setResultUrl(null)
+    setModelLabel(''); setPrompt(''); setError(null); setResultUrl(null)
   }
 
   const pickPhoto = async () => {
@@ -169,8 +228,12 @@ function GeneratePanel({ vkId, onDone }) {
       if (url) { setPhotoUrl(url); setStep('model') }
       else setError('Не удалось получить фото')
     } catch {
-      setError('Загрузка фото недоступна в этой версии VK. Попробуйте через приложение VK на телефоне.')
+      setError('Загрузка фото недоступна. Попробуйте в мобильном приложении VK.')
     }
+  }
+
+  const selectModel = (key, label) => {
+    setModelKey(key); setModelLabel(label); setStep('prompt')
   }
 
   const runGenerate = async () => {
@@ -182,95 +245,143 @@ function GeneratePanel({ vkId, onDone }) {
       setStep('result')
       onDone?.()
     } catch (e) {
-      if (e.code === 'no_credits') setError('Недостаточно кредитов для этой модели. Загляните в «Купить кредиты».')
-      else setError('Не получилось сгенерировать. Попробуйте ещё раз.')
+      if (e.code === 'no_credits') setError('Недостаточно кредитов. Зайдите в «Купить кредиты».')
+      else setError('Не получилось. Попробуйте ещё раз.')
     } finally {
       setBusy(false)
     }
   }
 
-  if (step === 'photo') {
-    return (
-      <Group>
-        <Div>
-          <Placeholder icon={<span style={{ fontSize: 48 }}>📷</span>} header="Шаг 1 из 3">
-            Выбери фотографию для обработки
+  const stepBack = () => {
+    if (step === 'model') setStep('photo')
+    else if (step === 'prompt') setStep('model')
+    else if (step === 'result') reset()
+    else goBack()
+  }
+
+  const steps = { photo: 1, model: 2, prompt: 3, result: 3 }
+  const stepLabels = ['Фото', 'Модель', 'Промпт']
+
+  return (
+    <>
+      {step !== 'photo' && (
+        <Group>
+          <Div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Button mode="tertiary" size="s" onClick={stepBack}>← Назад</Button>
+            <span style={{ color: 'var(--vkui--color_text_secondary)', fontSize: 13 }}>
+              Шаг {steps[step]} из 3 · {stepLabels[steps[step] - 1]}
+            </span>
+          </Div>
+        </Group>
+      )}
+
+      {step === 'photo' && (
+        <Group>
+          <Placeholder
+            icon={<Icon28CameraOutline width={56} height={56} />}
+            header="Выбери фото"
+            action={<Button size="l" onClick={pickPhoto}>Выбрать из галереи</Button>}
+          >
+            Загрузи своё фото для обработки нейросетью
           </Placeholder>
-        </Div>
-        {error && <Div style={{ color: 'var(--vkui--color_text_negative)' }}>{error}</Div>}
-        <Div><Button size="l" stretched onClick={pickPhoto}>Выбрать фото</Button></Div>
-      </Group>
-    )
-  }
+          {error && <Div style={{ color: 'var(--vkui--color_text_negative)', textAlign: 'center' }}>{error}</Div>}
+        </Group>
+      )}
 
-  if (step === 'model') {
-    const list = models?.gallery || []
-    return (
-      <Group header={<Header>Шаг 2 из 3 · Выбери модель</Header>}>
-        {list.map((m) => (
-          <Cell key={m.key} onClick={() => { setModelKey(m.key); setStep('prompt') }}>
-            {m.label}
-          </Cell>
-        ))}
-        {(models?.diamond || []).map((m) => (
-          <Cell key={m.key} subtitle={`${m.cost} 💎`} onClick={() => { setModelKey(m.key); setStep('prompt') }}>
-            {m.label}
-          </Cell>
-        ))}
-      </Group>
-    )
-  }
+      {step === 'model' && (
+        <>
+          <Group header={<Header>⭐ Стандартные модели</Header>}>
+            {(models?.gallery || []).map((m) => (
+              <SimpleCell
+                key={m.key}
+                after={<Icon28ChevronRightOutline />}
+                onClick={() => selectModel(m.key, m.label)}
+              >
+                {m.label}
+              </SimpleCell>
+            ))}
+          </Group>
+          {(models?.diamond || []).length > 0 && (
+            <Group header={<Header>💎 Алмазные модели</Header>}>
+              {(models.diamond || []).map((m) => (
+                <SimpleCell
+                  key={m.key}
+                  subtitle={`${m.cost} 💎 алмазов`}
+                  after={<Icon28ChevronRightOutline />}
+                  onClick={() => selectModel(m.key, m.label)}
+                >
+                  {m.label}
+                </SimpleCell>
+              ))}
+            </Group>
+          )}
+        </>
+      )}
 
-  if (step === 'prompt') {
-    return (
-      <Group header={<Header>Шаг 3 из 3 · Промпт (необязательно)</Header>}>
-        <FormItem top="Опиши, что хочешь получить, или оставь пустым">
-          <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Например: в стиле киберпанк, неон" />
-        </FormItem>
-        {error && <Div style={{ color: 'var(--vkui--color_text_negative)' }}>{error}</Div>}
-        <Div>
-          <Button size="l" stretched loading={busy} disabled={busy} onClick={runGenerate}>
-            ✨ Сгенерировать
-          </Button>
-        </Div>
-      </Group>
-    )
-  }
+      {step === 'prompt' && (
+        <Group>
+          <MiniInfoCell before={<span>📸</span>}>Фото выбрано</MiniInfoCell>
+          <MiniInfoCell before={<span>🎨</span>}>{modelLabel}</MiniInfoCell>
+          <FormItem top="Опиши желаемый результат (необязательно)">
+            <Textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="Например: в стиле киберпанк, неоновый свет"
+            />
+          </FormItem>
+          {error && <Div style={{ color: 'var(--vkui--color_text_negative)' }}>{error}</Div>}
+          <Div>
+            <Button size="l" stretched loading={busy} disabled={busy} onClick={runGenerate}>
+              ✨ Сгенерировать
+            </Button>
+          </Div>
+        </Group>
+      )}
 
-  if (step === 'result') {
-    return (
-      <Group>
-        <Div>
+      {step === 'result' && (
+        <Group>
           {resultUrl
-            ? <Card mode="shadow"><VKImage src={resultUrl} alt="Результат" style={{ width: '100%' }} /></Card>
-            : <Spinner size="l" />}
-        </Div>
-        <Div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {resultUrl && <Button size="l" stretched onClick={() => bridge.send('VKWebAppShare', { link: resultUrl })}>Поделиться</Button>}
-          <Button size="l" stretched mode="secondary" onClick={reset}>Сгенерировать ещё</Button>
-        </Div>
-      </Group>
-    )
-  }
-
-  return <Spinner size="l" />
+            ? <>
+                <Div><img src={resultUrl} alt="Результат" style={{ width: '100%', borderRadius: 12 }} /></Div>
+                <Div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Button size="l" stretched onClick={() => bridge.send('VKWebAppShare', { link: resultUrl })}>
+                    Поделиться
+                  </Button>
+                  <Button size="l" stretched mode="secondary" onClick={reset}>
+                    Сгенерировать ещё
+                  </Button>
+                </Div>
+              </>
+            : <Spinner size="l" style={{ marginTop: 40 }} />
+          }
+        </Group>
+      )}
+    </>
+  )
 }
 
-function BalancePanel({ me, loading }) {
+function BalancePanel({ me, loading, go }) {
   if (loading) return <Spinner size="l" style={{ marginTop: 40 }} />
   if (!me) return <Placeholder>Не удалось загрузить баланс</Placeholder>
   const rows = CREDIT_LABELS.filter(([key]) => (me[key] || 0) > 0)
   return (
-    <Group header={<Header>Текущий баланс</Header>}>
-      {rows.length === 0 && (
-        <Placeholder icon={<span style={{ fontSize: 40 }}>💳</span>}>
-          Кредитов пока нет — загляните в «Купить кредиты»
-        </Placeholder>
-      )}
-      {rows.map(([key, label]) => (
-        <Cell key={key} after={<b>{me[key]}</b>}>{label}</Cell>
-      ))}
-    </Group>
+    <>
+      <Group header={<Header>Текущий баланс</Header>}>
+        {rows.length === 0
+          ? <Placeholder icon={<span style={{ fontSize: 40 }}>💳</span>}>
+              Кредитов пока нет
+            </Placeholder>
+          : rows.map(([key, label]) => (
+              <SimpleCell key={key} after={<b>{me[key]}</b>}>{label}</SimpleCell>
+            ))
+        }
+      </Group>
+      <Group>
+        <Div>
+          <Button size="l" stretched onClick={() => go('tariffs')}>🛒 Купить кредиты</Button>
+        </Div>
+      </Group>
+    </>
   )
 }
 
@@ -302,13 +413,17 @@ function TariffsPanel({ vkId }) {
     <Group header={<Header>Тарифы</Header>}>
       {error && <Div style={{ color: 'var(--vkui--color_text_negative)' }}>{error}</Div>}
       {tariffs.map((t) => (
-        <Cell
+        <SimpleCell
           key={t.key}
           subtitle={`${t.price} ₽`}
-          after={<Button size="m" loading={busyKey === t.key} onClick={() => buy(t.key)}>Купить</Button>}
+          after={
+            <Button size="s" loading={busyKey === t.key} onClick={() => buy(t.key)}>
+              Купить
+            </Button>
+          }
         >
           {t.label}
-        </Cell>
+        </SimpleCell>
       ))}
     </Group>
   )
@@ -323,16 +438,27 @@ function HistoryPanel({ vkId }) {
   }, [vkId])
 
   if (items === null) return <Spinner size="l" style={{ marginTop: 40 }} />
-  if (items.length === 0) return <Placeholder icon={<span style={{ fontSize: 40 }}>🖼️</span>}>Здесь появятся ваши генерации</Placeholder>
+  if (items.length === 0) {
+    return (
+      <Placeholder icon={<span style={{ fontSize: 40 }}>🖼️</span>} header="Пока пусто">
+        Здесь появятся ваши генерации
+      </Placeholder>
+    )
+  }
 
   return (
     <Group header={<Header>Последние генерации</Header>}>
-      {items.map((it, i) => (
-        <Card key={i} mode="shadow" style={{ margin: 8 }}>
-          <VKImage src={it.result_url} alt="" style={{ width: '100%' }} />
-          {it.prompt && <Div style={{ fontSize: 13, color: 'var(--vkui--color_text_secondary)' }}>{it.prompt}</Div>}
-        </Card>
-      ))}
+      <CardGrid size="l">
+        {items.map((it, i) => (
+          <ContentCard
+            key={i}
+            src={it.result_url}
+            alt="Генерация"
+            subtitle={it.prompt || ''}
+            maxHeight={300}
+          />
+        ))}
+      </CardGrid>
     </Group>
   )
 }
@@ -340,20 +466,19 @@ function HistoryPanel({ vkId }) {
 function AboutPanel() {
   return (
     <Group>
-      <Div>
-        <Placeholder icon={<span style={{ fontSize: 48 }}>🪄</span>} header="FRAME">
-          AI-фотосессии прямо во ВКонтакте. Загрузи фото — получи стильные кадры за минуты.
-        </Placeholder>
-      </Div>
-      <Cell subtitle="Версия">1.0</Cell>
-      <Cell
-        subtitle="Сообщество"
-        onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/club239444342', blank: true })}
-      >
-        Бот FRAME VK
-      </Cell>
+      <Placeholder icon={<span style={{ fontSize: 56 }}>🪄</span>} header="FRAME">
+        AI-фотосессии прямо во ВКонтакте. Загрузи фото — получи стильные кадры за минуты.
+      </Placeholder>
+      <Group mode="plain">
+        <SimpleCell subtitle="Текущая версия">Версия 1.0</SimpleCell>
+        <SimpleCell
+          subtitle="Перейти в сообщество"
+          onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/club239444342' })}
+          after={<Icon28ChevronRightOutline />}
+        >
+          Бот FRAME VK
+        </SimpleCell>
+      </Group>
     </Group>
   )
 }
-
-export default App
