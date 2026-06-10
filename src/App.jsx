@@ -167,6 +167,7 @@ export default function App() {
   const [me, setMe] = useState(null)
   const [bannerVisible, setBannerVisible] = useState(true)
   const [genPreset, setGenPreset] = useState(null)
+  const [galleryStyle, setGalleryStyle] = useState(null) // экран генерации из галереи
   const [toastMsg, showToast] = useToast()
 
   const refreshMe = useCallback((id) => {
@@ -185,11 +186,25 @@ export default function App() {
 
   const goProfi = (preset) => { setGenPreset(preset || null); setActiveTab('profi') }
   const goTariffs = () => setActiveTab('tariffs')
+  const openGalleryStyle = (style) => setGalleryStyle(style)
 
   return (
     <AppRoot>
       <div className="frame-app">
-        {bannerVisible && (
+        {/* Экран генерации из галереи (поверх всего) */}
+        {galleryStyle && (
+          <GalleryGenView
+            style={galleryStyle}
+            vkId={vkUser?.id}
+            me={me}
+            onBack={() => setGalleryStyle(null)}
+            onDone={() => { refreshMe(vkUser?.id); setGalleryStyle(null) }}
+            onGoTariffs={() => { setGalleryStyle(null); goTariffs() }}
+            showToast={showToast}
+          />
+        )}
+
+        {!galleryStyle && bannerVisible && (
           <div className="sale-banner" onClick={goTariffs}>
             <span className="sb-fire">🔥</span>
             <div className="sb-text"><b>−50%</b> на все тарифы · Только сейчас!</div>
@@ -197,9 +212,9 @@ export default function App() {
           </div>
         )}
 
-        <div className={`page-wrap${bannerVisible ? ' has-banner' : ''}`}>
+        {!galleryStyle && <div className={`page-wrap${bannerVisible ? ' has-banner' : ''}`}>
           {activeTab === 'novichok' && (
-            <NovichokTab me={me} onGoProfi={goProfi} onGoTariffs={goTariffs} />
+            <NovichokTab me={me} onRepeat={openGalleryStyle} onGoTariffs={goTariffs} />
           )}
           {activeTab === 'profi' && (
             <ProfiTab vkId={vkUser?.id} me={me} preset={genPreset} onDone={() => refreshMe(vkUser?.id)} onGoTariffs={goTariffs} showToast={showToast} />
@@ -213,9 +228,9 @@ export default function App() {
           {activeTab === 'profile' && (
             <ProfileTab vkId={vkUser?.id} me={me} onGoTariffs={goTariffs} showToast={showToast} />
           )}
-        </div>
+        </div>}
 
-        <nav className="bottom-nav">
+        {!galleryStyle && <nav className="bottom-nav">
           {TABS.map(({ id, icon, label }) => (
             <button
               key={id}
@@ -226,7 +241,7 @@ export default function App() {
               <span>{label}</span>
             </button>
           ))}
-        </nav>
+        </nav>}
 
         <Toast msg={toastMsg} />
       </div>
@@ -247,8 +262,172 @@ function TopBar({ me, onGoTariffs }) {
   )
 }
 
+/* ── Маппинг качество → ключ модели ── */
+const QUALITY_MODEL = { std: 'nb_edit', v2: 'nb2_edit', pro: 'nbpro_edit' }
+const QUALITY_CREDIT = { std: 'std_credits', v2: 'v2_credits', pro: 'pro_credits' }
+const QUALITY_LABEL = { std: '⭐ Стандарт', v2: '✨ Версия 2', pro: '💎 Про' }
+
+/* ────────────────────────────── ГАЛЕРЕЙНАЯ ГЕНЕРАЦИЯ ── */
+function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToast }) {
+  const qualities = (style.quality_modes || 'std,v2,pro').split(',').map(q => q.trim()).filter(q => QUALITY_MODEL[q])
+  const [quality, setQuality]   = useState(qualities[0] || 'std')
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [inputVal, setInputVal] = useState('')
+  const [busy, setBusy]         = useState(false)
+  const [error, setError]       = useState(null)
+  const [resultUrl, setResultUrl] = useState(null)
+  const [elapsed, setElapsed]   = useState(0)
+  const timerRef = useRef(null)
+
+  const startTimer = () => { setElapsed(0); timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000) }
+  const stopTimer  = () => { clearInterval(timerRef.current); timerRef.current = null }
+  const fmtTime    = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`
+
+  const pickPhoto = async () => {
+    setError(null)
+    try {
+      const r = await bridge.send('VKWebAppOpenFiles', { count: 1 })
+      const file = r?.files?.[0] || r?.urls?.[0]
+      const url = typeof file === 'string' ? file : file?.url
+      if (url) setPhotoUrl(url)
+      else setError('Не удалось получить фото')
+    } catch {
+      setError('Загрузка фото доступна в мобильном приложении VK')
+    }
+  }
+
+  const generate = async () => {
+    if (!vkId) { setError('Войди в VK чтобы продолжить'); return }
+    if (!photoUrl) { setError('Загрузи своё фото'); return }
+    setBusy(true); setError(null); setResultUrl(null); startTimer()
+    const modelKey = QUALITY_MODEL[quality]
+    const promptFull = [style.prompt || '', inputVal].filter(Boolean).join(', ')
+    try {
+      const r = await api.generate(vkId, photoUrl, modelKey, promptFull)
+      setResultUrl(r.result_url)
+      onDone?.()
+    } catch (e) {
+      if (e.code === 'no_credits') {
+        setError(`Недостаточно кредитов ${QUALITY_LABEL[quality]}`)
+      } else {
+        setError('Ошибка генерации. Попробуй снова.')
+      }
+    } finally { setBusy(false); stopTimer() }
+  }
+
+  /* Экран результата */
+  if (resultUrl) return (
+    <div className="gal-gen-wrap">
+      <button className="gal-back-btn" onClick={onBack}>← Назад</button>
+      <div className="sec-title" style={{marginTop:16}}>Готово! 🎉</div>
+      <img src={resultUrl} alt="Результат" className="gen-result-img" />
+      <div className="gen-result-btns">
+        <button className="gen-result-btn" onClick={() => { setResultUrl(null); setPhotoUrl('') }}>🔄 Ещё раз</button>
+        <button className="gen-result-btn primary" onClick={() => bridge.send('VKWebAppShare', { link: resultUrl })}>📤 Поделиться</button>
+      </div>
+    </div>
+  )
+
+  const creditKey = QUALITY_CREDIT[quality]
+  const credits   = me?.[creditKey] ?? 0
+  const diamond   = me?.diamond_credits ?? 0
+
+  return (
+    <div className="gal-gen-wrap">
+      {/* Шапка */}
+      <div className="gal-gen-header">
+        <button className="gal-back-btn" onClick={onBack}>← Назад</button>
+        <div className="gal-gen-title">{style.name || 'Стиль'}</div>
+      </div>
+
+      {/* Превью стиля */}
+      {style.photo_url && (
+        <div className="gal-preview-wrap">
+          <img src={style.photo_url} alt={style.name} className="gal-preview-img" />
+        </div>
+      )}
+
+      {/* Загрузка фото */}
+      <div className="pro-field-label" style={{marginTop:16}}>Твоё фото</div>
+      <div style={{fontSize:12,color:'#888',marginBottom:8}}>{style.photo_hint || 'Лицо должно быть хорошо видно'}</div>
+      {photoUrl
+        ? <label className="pro-upload-zone has-photo" onClick={pickPhoto}>
+            <img src={photoUrl} className="pro-upload-preview" alt="" />
+          </label>
+        : <label className="pro-upload-zone" onClick={pickPhoto}>
+            <div className="pro-upload-ph">
+              <div style={{fontSize:36,marginBottom:8}}>📷</div>
+              <div style={{fontSize:14,fontWeight:700,color:'#a78bfa'}}>Нажми чтобы выбрать фото</div>
+              <div style={{fontSize:12,color:'#555',marginTop:6}}>Лицо чётко видно · без очков</div>
+            </div>
+          </label>
+      }
+      {photoUrl && (
+        <button className="pro-other-btn" style={{marginTop:8,marginBottom:4}} onClick={() => setPhotoUrl('')}>Сменить фото</button>
+      )}
+
+      {/* Дополнительный ввод (input_label) */}
+      {style.input_label && (
+        <>
+          <div className="pro-field-label" style={{marginTop:16}}>{style.input_label}</div>
+          <input
+            className="pro-textarea"
+            style={{height:44,resize:'none'}}
+            placeholder={style.input_label}
+            value={inputVal}
+            onChange={e => setInputVal(e.target.value)}
+          />
+        </>
+      )}
+
+      {/* Выбор качества */}
+      <div className="pro-field-label" style={{marginTop:20}}>Качество</div>
+      <div className="gal-quality-row">
+        {qualities.map(q => {
+          const ckey = QUALITY_CREDIT[q]
+          const cnt  = me?.[ckey] ?? 0
+          const hasDia = me?.diamond_credits >= { std:79, v2:99, pro:149 }[q]
+          const ok = cnt > 0 || hasDia
+          return (
+            <button
+              key={q}
+              className={`gal-quality-btn${quality === q ? ' active' : ''}${!ok ? ' no-cred' : ''}`}
+              onClick={() => setQuality(q)}
+            >
+              <div className="gal-q-label">{QUALITY_LABEL[q]}</div>
+              <div className="gal-q-count">{cnt > 0 ? `${cnt} шт.` : ok ? '💎' : 'нет'}</div>
+            </button>
+          )
+        })}
+      </div>
+      {credits === 0 && diamond < {std:79,v2:99,pro:149}[quality] && (
+        <div style={{fontSize:12,color:'#ef4444',marginTop:8,textAlign:'center'}}>
+          Нет кредитов {QUALITY_LABEL[quality]} — <span style={{color:'#a78bfa',cursor:'pointer'}} onClick={onGoTariffs}>пополнить →</span>
+        </div>
+      )}
+
+      {error && <div className="error-msg" style={{marginTop:12}}>{error}</div>}
+
+      {busy ? (
+        <div className="gen-progress" style={{display:'block',marginTop:20}}>
+          <div className="gen-spinner-wrap"><div className="gen-spinner-big" /></div>
+          <div className="gen-timer-label">{fmtTime(elapsed)}</div>
+          <div className="gen-timer-max">Максимум: 5:00</div>
+          <div className="gen-prog-bar-wrap"><div className="gen-prog-bar" style={{width:`${Math.min(100,(elapsed/300)*100)}%`}} /></div>
+          <div className="gen-status-txt">Обрабатываем твоё фото…</div>
+        </div>
+      ) : (
+        <button className="pro-create-btn" style={{marginTop:20}} onClick={generate} disabled={!photoUrl}>
+          ✨ Создать в {QUALITY_LABEL[quality]}
+        </button>
+      )}
+      <div style={{height:32}} />
+    </div>
+  )
+}
+
 /* ────────────────────────────────── НОВИЧОК ── */
-function NovichokTab({ me, onGoProfi, onGoTariffs }) {
+function NovichokTab({ me, onRepeat, onGoTariffs }) {
   const [categories, setCategories]   = useState(CATEGORIES) // fallback — static
   const [activecat, setActivecat]     = useState('all')
   const [styles, setStyles]           = useState([])
@@ -320,7 +499,7 @@ function NovichokTab({ me, onGoProfi, onGoTariffs }) {
                   </div>
                   <div className="badge-hot">⭐ ХИТ</div>
                 </div>
-                <button className="card-btn" onClick={() => onGoProfi({ prompt: s.prompt || s.name, styleId: s.id })}>✨ Повторить</button>
+                <button className="card-btn" onClick={() => onRepeat(s)}>✨ Повторить</button>
               </div>
             ))}
           </div>
@@ -340,7 +519,7 @@ function NovichokTab({ me, onGoProfi, onGoTariffs }) {
                   <div className="badge-hot">⭐ ХИТ</div>
                   <div className="badge-input">{h.desc}</div>
                 </div>
-                <button className="card-btn" onClick={() => onGoProfi({ prompt: h.prompt })}>✨ Повторить</button>
+                <button className="card-btn" onClick={() => onRepeat({ name: h.title, prompt: h.prompt, quality_modes: 'std,v2,pro' })}>✨ Повторить</button>
               </div>
             ))}
           </div>
