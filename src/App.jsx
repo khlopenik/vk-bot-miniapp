@@ -861,18 +861,17 @@ function TariffsTab({ vkId, showToast }) {
   const [promoStatus, setPromoStatus] = useState(null)
   const [busyKey, setBusyKey] = useState(null)
   const [builderOpen, setBuilderOpen] = useState(false)
+  const [payUrl, setPayUrl] = useState(null)
 
   const buy = async (key) => {
     if (!vkId) { showToast('Нет vk_id'); return }
+    if (busyKey) return
     setBusyKey(key)
+    showToast('⏳ Создаём ссылку для оплаты...')
     try {
       const r = await api.pay(vkId, key)
       if (r.confirmation_url) {
-        try {
-          await bridge.send('VKWebAppOpenLink', { link: r.confirmation_url })
-        } catch {
-          window.open(r.confirmation_url, '_blank')
-        }
+        setPayUrl(r.confirmation_url)
       } else showToast('Ошибка оплаты')
     } catch (e) { showToast('Ошибка: ' + (e?.message || JSON.stringify(e) || 'попробуй позже')) }
     finally { setBusyKey(null) }
@@ -1052,6 +1051,28 @@ function TariffsTab({ vkId, showToast }) {
       )}
 
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
+
+      {payUrl && (
+        <div className="pay-modal-overlay" onClick={() => setPayUrl(null)}>
+          <div className="pay-modal" onClick={e => e.stopPropagation()}>
+            <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
+            <div className="pay-modal-desc">Нажми кнопку ниже, чтобы перейти к оплате. После оплаты алмазы зачислятся автоматически.</div>
+            <a
+              className="pay-modal-btn"
+              href={payUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => {
+                bridge.send('VKWebAppOpenLink', { link: payUrl }).catch(() => {})
+                setTimeout(() => setPayUrl(null), 500)
+              }}
+            >
+              Перейти к оплате →
+            </a>
+            <button className="pay-modal-cancel" onClick={() => setPayUrl(null)}>Отмена</button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -1067,7 +1088,7 @@ function TariffList({ tariffs, busyKey, onBuy }) {
   return (
     <div className="t-list">
       {tariffs.filter(t => !t.hero).map(t => (
-        <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => onBuy(t.key)}>
+        <div key={t.key} className={`t-row${t.popular?' popular':''}${busyKey===t.key?' busy':''}`} onClick={() => !busyKey && onBuy(t.key)}>
           <div className="t-row-qty">
             {t.label} {t.popular && <span className="pop-label">Популярное</span>}
           </div>

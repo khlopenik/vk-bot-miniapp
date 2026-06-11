@@ -463,3 +463,29 @@ html, body, #root {
 .gal-q-label { font-size: 12px; font-weight: 700; color: #c4b5fd; margin-bottom: 4px; }
 .gal-q-count { font-size: 11px; color: #888; }
 .gal-quality-btn.active .gal-q-count { color: #a78bfa; }
+
+/* Модал оплаты */
+.pay-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.pay-modal {
+  background: #1c1c2e; border-radius: 20px; padding: 28px 24px;
+  max-width: 360px; width: 100%; text-align: center;
+  border: 1.5px solid rgba(124,92,191,.4);
+}
+.pay-modal-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 12px; }
+.pay-modal-desc { font-size: 14px; color: #aaa; margin-bottom: 24px; line-height: 1.5; }
+.pay-modal-btn {
+  display: block; width: 100%; padding: 16px;
+  background: linear-gradient(135deg, #7c5cbf, #a855f7);
+  color: #fff; font-size: 17px; font-weight: 800;
+  border-radius: 14px; text-decoration: none; margin-bottom: 12px;
+  cursor: pointer;
+}
+.pay-modal-btn:active { opacity: .85; }
+.pay-modal-cancel {
+  background: none; border: none; color: #888; font-size: 15px;
+  cursor: pointer; padding: 8px;
+}
+.t-row.busy { opacity: .6; pointer-events: none; }
