@@ -1,7 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import bridge from '@vkontakte/vk-bridge'
-import { AppRoot } from '@vkontakte/vkui'
-import '@vkontakte/vkui/dist/vkui.css'
 import { api } from './api'
 import './App.css'
 
@@ -178,6 +176,11 @@ export default function App() {
 
   useEffect(() => {
     try { bridge.send('VKWebAppInit') } catch {}
+    // Читаем hash из URL для навигации из кнопок бота
+    const hash = window.location.hash.replace('#', '')
+    if (['novichok','profi','tariffs','history','profile'].includes(hash)) {
+      setActiveTab(hash)
+    }
     const timeout = (ms) => new Promise((_, r) => setTimeout(() => r(new Error('to')), ms))
     Promise.race([bridge.send('VKWebAppGetUserInfo'), timeout(5000)])
       .then((u) => { setVkUser(u); return api.me(u.id) })
@@ -190,7 +193,7 @@ export default function App() {
   const openGalleryStyle = (style) => setGalleryStyle(style)
 
   return (
-    <AppRoot appearance="dark">
+    <>
       <div className="frame-app">
         {/* Экран генерации из галереи (поверх всего) */}
         {galleryStyle && (
@@ -246,7 +249,7 @@ export default function App() {
 
         <Toast msg={toastMsg} />
       </div>
-    </AppRoot>
+    </>
   )
 }
 
@@ -360,7 +363,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
             <div className="pro-upload-ph">
               <div style={{fontSize:36,marginBottom:8}}>📷</div>
               <div style={{fontSize:14,fontWeight:700,color:'#a78bfa'}}>Нажми чтобы выбрать фото</div>
-              <div style={{fontSize:12,color:'#555',marginTop:6}}>Лицо чётко видно · без очков</div>
+              <div style={{fontSize:12,color:'#888',marginTop:6}}>Лицо чётко видно · без очков</div>
             </div>
           </label>
       }
@@ -647,7 +650,7 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, showToast }) {
                 <div className="pro-upload-ph">
                   <div style={{fontSize:36,marginBottom:8}}>📷</div>
                   <div style={{fontSize:14,fontWeight:700,color:'#a78bfa'}}>Нажми чтобы выбрать фото</div>
-                  <div style={{fontSize:12,color:'#555',marginTop:6}}>До 10 фото · лицо чётко видно</div>
+                  <div style={{fontSize:12,color:'#888',marginTop:6}}>До 10 фото · лицо чётко видно</div>
                 </div>
               </label>
           }
@@ -860,7 +863,7 @@ function TariffsTab({ vkId, showToast }) {
                   <div className="vtip-cta-sub">⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
                 </div>
                 <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:12,color:'#555',textDecoration:'line-through'}}>149 ₽</div>
+                  <div style={{fontSize:12,color:'#888',textDecoration:'line-through'}}>149 ₽</div>
                   <div className="vtip-cta-price">74 ₽</div>
                 </div>
               </div>
@@ -878,7 +881,7 @@ function TariffsTab({ vkId, showToast }) {
                 <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => buy(t.key)}>
                   <div className="t-row-qty" style={{flexDirection:'column',alignItems:'flex-start',gap:3}}>
                     <span>{t.label}</span>
-                    <span style={{fontSize:11,color:'#555',fontWeight:500}}>{t.sub}</span>
+                    <span style={{fontSize:11,color:'#888',fontWeight:500}}>{t.sub}</span>
                   </div>
                   <div className="t-row-right">
                     <div style={{textAlign:'right'}}>
@@ -891,6 +894,10 @@ function TariffsTab({ vkId, showToast }) {
               ))}
             </div>
           </div>
+
+          {/* Собери свой пакет */}
+          <div style={{padding:'18px 16px 2px',fontSize:18,fontWeight:900,color:'#fff'}}>🎨 Собери свой пакет</div>
+          <div style={{padding:'0 16px 10px',fontSize:12,color:'#888'}}>Выбери версию и количество фото</div>
 
           {/* Q-tabs */}
           <div className="q-tabs-wrap">
@@ -915,7 +922,7 @@ function TariffsTab({ vkId, showToast }) {
           )}
 
           {qTab === 'video' ? (
-            <div style={{textAlign:'center',padding:'32px 16px 24px',color:'#555',lineHeight:1.7}}>
+            <div style={{textAlign:'center',padding:'32px 16px 24px',color:'#888',lineHeight:1.7}}>
               <div style={{fontSize:28,marginBottom:10}}>🎬</div>
               <div style={{fontSize:15,fontWeight:700,color:'#888',marginBottom:6}}>Оживление фото</div>
               <div style={{fontSize:13,color:'#777'}}>Появится при следующем обновлении</div>
@@ -930,7 +937,7 @@ function TariffsTab({ vkId, showToast }) {
 
       {level === 'advanced' && (
         <div className="t-list" style={{padding:'0 16px 100px'}}>
-          <div style={{fontSize:11,color:'#555',padding:'4px 0 10px',lineHeight:1.5}}>
+          <div style={{fontSize:11,color:'#888',padding:'4px 0 10px',lineHeight:1.5}}>
             Кол-во генераций зависит от модели · НБ Стандарт (79💎) — больше · дорогие модели — меньше
           </div>
           {DIAMOND_TARIFFS.map(t => (
