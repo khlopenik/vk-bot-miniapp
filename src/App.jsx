@@ -1053,25 +1053,52 @@ function TariffsTab({ vkId, showToast }) {
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
 
       {payUrl && (
-        <div className="pay-modal-overlay" onClick={() => setPayUrl(null)}>
-          <div className="pay-modal" onClick={e => e.stopPropagation()}>
-            <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
-            <div className="pay-modal-desc">Нажми кнопку ниже, чтобы перейти к оплате. После оплаты алмазы зачислятся автоматически.</div>
-            <button
-              className="pay-modal-btn"
-              onClick={() => {
-                bridge.send('VKWebAppOpenLink', { link: payUrl })
-                  .catch(() => { window.location.href = payUrl })
-                setPayUrl(null)
-              }}
-            >
-              Перейти к оплате →
-            </button>
-            <button className="pay-modal-cancel" onClick={() => setPayUrl(null)}>Отмена</button>
-          </div>
-        </div>
+        <PayModal url={payUrl} onClose={() => setPayUrl(null)} showToast={showToast} />
       )}
     </>
+  )
+}
+
+/* Модал оплаты — надёжно открывает ссылку YooKassa на любой платформе */
+function PayModal({ url, onClose, showToast }) {
+  // vk_platform приходит в query-параметрах запуска мини-аппа
+  const platform = new URLSearchParams(window.location.search).get('vk_platform') || ''
+  const isDesktop = platform.includes('desktop') || platform.includes('web') && !platform.includes('mobile')
+
+  const openPay = () => {
+    // На десктопе window.open в обработчике клика не блокируется попап-фильтром
+    if (isDesktop) {
+      const w = window.open(url, '_blank')
+      if (!w) bridge.send('VKWebAppOpenLink', { link: url }).catch(() => {})
+    } else {
+      bridge.send('VKWebAppOpenLink', { link: url }).catch(() => {
+        const w = window.open(url, '_blank')
+        if (!w) window.location.href = url
+      })
+    }
+    onClose()
+  }
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(url)
+      showToast('✅ Ссылка скопирована')
+    } catch {
+      showToast('Выдели и скопируй ссылку вручную')
+    }
+  }
+
+  return (
+    <div className="pay-modal-overlay" onClick={onClose}>
+      <div className="pay-modal" onClick={e => e.stopPropagation()}>
+        <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
+        <div className="pay-modal-desc">Нажми «Перейти к оплате». После оплаты алмазы зачислятся автоматически.</div>
+        <button className="pay-modal-btn" onClick={openPay}>Перейти к оплате →</button>
+        <div className="pay-modal-link" onClick={e => { e.stopPropagation() }}>{url}</div>
+        <button className="pay-modal-copy" onClick={copyLink}>📋 Скопировать ссылку</button>
+        <button className="pay-modal-cancel" onClick={onClose}>Отмена</button>
+      </div>
+    </div>
   )
 }
 

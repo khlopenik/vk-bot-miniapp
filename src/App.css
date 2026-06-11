@@ -484,6 +484,17 @@ html, body, #root {
   cursor: pointer;
 }
 .pay-modal-btn:active { opacity: .85; }
+.pay-modal-link {
+  font-size: 11px; color: #7c8; word-break: break-all; user-select: all;
+  background: rgba(255,255,255,.05); border-radius: 10px; padding: 10px 12px;
+  margin-bottom: 10px; text-align: left; line-height: 1.4;
+}
+.pay-modal-copy {
+  display: block; width: 100%; padding: 12px;
+  background: rgba(255,255,255,.08); color: #ddd; font-size: 14px; font-weight: 700;
+  border: none; border-radius: 12px; cursor: pointer; margin-bottom: 8px;
+}
+.pay-modal-copy:active { background: rgba(255,255,255,.16); }
 .pay-modal-cancel {
   background: none; border: none; color: #888; font-size: 15px;
   cursor: pointer; padding: 8px;
