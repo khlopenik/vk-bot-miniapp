@@ -754,7 +754,7 @@ function TariffsTab({ vkId, showToast }) {
       const r = await api.pay(vkId, key)
       if (r.confirmation_url) await bridge.send('VKWebAppOpenLink', { link: r.confirmation_url })
       else showToast('Ошибка оплаты')
-    } catch { showToast('Ошибка платежа. Попробуй позже.') }
+    } catch (e) { showToast('Ошибка: ' + (e?.message || 'попробуй позже')) }
     finally { setBusyKey(null) }
   }
 
