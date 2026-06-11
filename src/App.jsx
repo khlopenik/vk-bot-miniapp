@@ -1053,14 +1053,14 @@ function TariffsTab({ vkId, showToast }) {
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
 
       {payUrl && (
-        <PayModal url={payUrl} onClose={() => setPayUrl(null)} showToast={showToast} />
+        <PayModal url={payUrl} onClose={() => setPayUrl(null)} />
       )}
     </>
   )
 }
 
 /* Модал оплаты — надёжно открывает ссылку YooKassa на любой платформе */
-function PayModal({ url, onClose, showToast }) {
+function PayModal({ url, onClose }) {
   // vk_platform приходит в query-параметрах запуска мини-аппа
   const platform = new URLSearchParams(window.location.search).get('vk_platform') || ''
   const isDesktop = platform.includes('desktop') || platform.includes('web') && !platform.includes('mobile')
@@ -1079,23 +1079,12 @@ function PayModal({ url, onClose, showToast }) {
     onClose()
   }
 
-  const copyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(url)
-      showToast('✅ Ссылка скопирована')
-    } catch {
-      showToast('Выдели и скопируй ссылку вручную')
-    }
-  }
-
   return (
     <div className="pay-modal-overlay" onClick={onClose}>
       <div className="pay-modal" onClick={e => e.stopPropagation()}>
-        <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
-        <div className="pay-modal-desc">Нажми «Перейти к оплате». После оплаты алмазы зачислятся автоматически.</div>
-        <button className="pay-modal-btn" onClick={openPay}>Перейти к оплате →</button>
-        <div className="pay-modal-link" onClick={e => { e.stopPropagation() }}>{url}</div>
-        <button className="pay-modal-copy" onClick={copyLink}>📋 Скопировать ссылку</button>
+        <div className="pay-modal-title">💳 Переход к оплате</div>
+        <div className="pay-modal-desc">Безопасная оплата через ЮKassa. После оплаты алмазы зачислятся автоматически.</div>
+        <button className="pay-modal-btn" onClick={openPay}>Оплатить →</button>
         <button className="pay-modal-cancel" onClick={onClose}>Отмена</button>
       </div>
     </div>
