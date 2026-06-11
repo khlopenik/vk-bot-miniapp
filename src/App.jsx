@@ -492,7 +492,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs }) {
               <div key={s.id} className="card">
                 <div className="card-img-wrap">
                   {s.photo_url
-                    ? <img src={s.photo_url} alt={s.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 10 }} />
+                    ? <img src={s.photo_url} alt={s.name} />
                     : <div className="card-no-img">🪄</div>
                   }
                   <div className="card-overlay">
@@ -810,7 +810,10 @@ function TariffsTab({ vkId, showToast }) {
             <div className="t-hero-name">Пробный пакет</div>
             <div className="t-hero-desc">3 фото во всех версиях сразу — чтобы найти свою<br/>⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
             <div className="t-hero-bottom">
-              <div className="t-hero-price">149 ₽</div>
+              <div>
+                <div className="t-orig-price" style={{fontSize:13}}>298 ₽</div>
+                <div className="t-hero-price">149 ₽</div>
+              </div>
               <div className="t-hero-cta">Купить →</div>
             </div>
           </div>
@@ -924,7 +927,10 @@ function TariffsTab({ vkId, showToast }) {
               </div>
               <div className="t-row-right">
                 {t.perPhoto && <div className="t-row-per">{t.perPhoto}</div>}
-                <div className="t-row-price">{t.price}</div>
+                <div style={{textAlign:'right'}}>
+                  <span className="t-orig-price">{origPrice(t.price)}</span>
+                  <div className="t-row-price">{t.price}</div>
+                </div>
                 {t.discount && <div className={`t-save-badge${t.best?' best':''}`}>{t.discount}</div>}
               </div>
             </div>
@@ -933,6 +939,13 @@ function TariffsTab({ vkId, showToast }) {
       )}
     </>
   )
+}
+
+/* Вычисляет оригинальную цену до скидки 50% */
+function origPrice(priceStr) {
+  const num = parseInt(priceStr.replace(/\s/g, ''))
+  if (isNaN(num)) return null
+  return (num * 2).toLocaleString('ru-RU') + ' ₽'
 }
 
 function TariffList({ tariffs, busyKey, onBuy }) {
@@ -945,7 +958,10 @@ function TariffList({ tariffs, busyKey, onBuy }) {
           </div>
           <div className="t-row-right">
             {t.perPhoto && <div className="t-row-per">{t.perPhoto}</div>}
-            <div className="t-row-price">{t.price}</div>
+            <div style={{textAlign:'right'}}>
+              <span className="t-orig-price">{origPrice(t.price)}</span>
+              <div className="t-row-price">{t.price}</div>
+            </div>
             {t.discount && <div className={`t-save-badge${t.best?' best':''}`}>{t.discount}</div>}
           </div>
         </div>
