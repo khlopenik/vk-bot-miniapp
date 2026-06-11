@@ -758,6 +758,100 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, showToast }) {
   )
 }
 
+/* ── Конструктор «Собери свой набор» ── */
+const BUILDER_BASE = { std: 79, v2: 99, pro: 149, nude: 89, family: 390, video: 390, couples: 149 }
+const BUILDER_UNIT_LABEL = { std: 'фото', v2: 'фото', pro: 'фото', nude: 'фото', family: 'портрет', video: 'видео', couples: 'фото' }
+const BUILDER_CATS = [
+  ['std', '⭐ Стандарт'], ['v2', '✨ Версия 2'], ['pro', '💎 Про'],
+  ['nude', '🌸 Ню'], ['family', '👨‍👩‍👧 Семейный'], ['video', '🎬 Оживление'], ['couples', '💑 Парные фото'],
+]
+function getUnitPrice(cat, qty) {
+  if (cat === 'std')    { if (qty>=50) return 39; if (qty>=30) return 49; if (qty>=10) return 59; return 79 }
+  if (cat === 'v2')     { if (qty>=50) return 49; if (qty>=30) return 63; if (qty>=10) return 79; return 99 }
+  if (cat === 'pro')    { if (qty>=50) return 80; if (qty>=30) return 83; if (qty>=10) return 119; return 149 }
+  if (cat === 'nude')   { if (qty>=20) return 59; if (qty>=10) return 69; if (qty>=5) return 78; if (qty>=3) return 83; return 89 }
+  if (cat === 'family') { if (qty>=5) return 298; if (qty>=3) return 330; return 390 }
+  if (cat === 'video')  { if (qty>=3) return 330; return 390 }
+  if (cat === 'couples'){ if (qty>=10) return 119; if (qty>=5) return 129; if (qty>=3) return 139; return 149 }
+  return 0
+}
+const SITE_DISCOUNT = 50 // акция −50%
+
+/* Bottom-sheet конструктора */
+function BuilderSheet({ open, onClose, onBuy }) {
+  const [qty, setQty] = useState({ std:0, v2:0, pro:0, nude:0, family:0, video:0, couples:0 })
+  useEffect(() => { if (open) setQty({ std:0, v2:0, pro:0, nude:0, family:0, video:0, couples:0 }) }, [open])
+  const step = (cat, d) => setQty(q => ({ ...q, [cat]: Math.max(0, q[cat] + d) }))
+  const mult = (100 - SITE_DISCOUNT) / 100
+
+  let total = 0, hasBulk = false
+  const rows = BUILDER_CATS.map(([cat, label]) => {
+    const n = qty[cat]
+    const unitRaw = n > 0 ? getUnitPrice(cat, n) : BUILDER_BASE[cat]
+    const unit = Math.round(unitRaw * mult)
+    const sub = n * unit
+    const bulk = n > 0 && unitRaw < BUILDER_BASE[cat]
+    if (bulk) hasBulk = true
+    total += sub
+    return { cat, label, n, unit, sub, bulk }
+  })
+
+  const buyNow = () => {
+    const key = `build_${qty.std}_${qty.v2}_${qty.pro}_${qty.nude}_${qty.family}_${qty.video}`
+    onBuy(key)
+  }
+
+  return (
+    <div className={`builder-overlay${open ? ' open' : ''}`} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div className="builder-sheet">
+        <div className="builder-hero">
+          <div className="builder-hero-top">
+            <div style={{width:40,height:4,background:'rgba(255,255,255,.15)',borderRadius:2}} />
+            <button className="builder-close-btn" onClick={onClose}>Закрыть</button>
+          </div>
+          <div className="builder-hero-chips">
+            <span className="builder-hero-chip bchip-std">⭐ Стандарт</span>
+            <span className="builder-hero-chip bchip-v2">✨ Версия 2</span>
+            <span className="builder-hero-chip bchip-pro">💎 Про</span>
+            <span className="builder-hero-chip bchip-nude">🌸 Ню</span>
+            <span className="builder-hero-chip bchip-family">👨‍👩‍👧 Семейный</span>
+            <span className="builder-hero-chip bchip-video">🎬 Видео</span>
+            <span className="builder-hero-chip bchip-couples">💑 Парные</span>
+          </div>
+          <div className="builder-hero-title">Свой набор</div>
+          <div className="builder-hero-sub">Добавляй нужное · скидка растёт вместе с количеством</div>
+        </div>
+
+        {rows.map(({ cat, label, n, unit, sub, bulk }) => (
+          <div className="builder-row" key={cat}>
+            <div className="builder-row-info">
+              <div className="builder-row-label">{label}</div>
+              <div className={`builder-row-price-unit${bulk ? ' discount' : ''}`}>{unit} ₽/{BUILDER_UNIT_LABEL[cat]}</div>
+            </div>
+            <div className="builder-row-right">
+              <button className="builder-stepper-btn" onClick={() => step(cat, -1)}>−</button>
+              <div className="builder-qty">{n}</div>
+              <button className="builder-stepper-btn" onClick={() => step(cat, 1)}>+</button>
+              <div className="builder-row-sub">{n ? sub.toLocaleString('ru-RU') + ' ₽' : ''}</div>
+            </div>
+          </div>
+        ))}
+
+        <div className="builder-total-row">
+          <div className="builder-total-label">Итого</div>
+          <div className="builder-total-price">{total ? total.toLocaleString('ru-RU') + ' ₽' : '0 ₽'}</div>
+        </div>
+        <div className={`builder-discount-note${(hasBulk || total>0) ? ' visible' : ''}`}>
+          {total > 0 ? `🔥 Акция −${SITE_DISCOUNT}% применена` : ''}
+        </div>
+        <button className="builder-buy-btn" disabled={total === 0} onClick={buyNow}>
+          {total ? `Купить за ${total.toLocaleString('ru-RU')} ₽` : 'Выбери хотя бы один тип'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /* ────────────────────────────────── ТАРИФЫ ── */
 function TariffsTab({ vkId, showToast }) {
   const [level, setLevel] = useState('novice') // novice | advanced
@@ -766,6 +860,7 @@ function TariffsTab({ vkId, showToast }) {
   const [promo, setPromo] = useState('')
   const [promoStatus, setPromoStatus] = useState(null)
   const [busyKey, setBusyKey] = useState(null)
+  const [builderOpen, setBuilderOpen] = useState(false)
 
   const buy = async (key) => {
     if (!vkId) { showToast('Нет vk_id'); return }
@@ -829,11 +924,11 @@ function TariffsTab({ vkId, showToast }) {
 
       {level === 'novice' && (
         <>
-          {/* 1. Hero trial */}
+          {/* 1. Пробный пакет (hero) */}
           <div className="t-hero" onClick={() => buy('trial')}>
             <div className="t-hero-badge">🎁 ДЛЯ НОВИЧКОВ · САМЫЙ ПОПУЛЯРНЫЙ</div>
-            <div className="t-hero-name">Пробный пакет · 3 фото</div>
-            <div className="t-hero-desc">⭐ Стандарт · ✨ Версия 2 · 💎 Про — попробуй все три сразу</div>
+            <div className="t-hero-name">Пробный пакет</div>
+            <div className="t-hero-desc">3 фото во всех версиях сразу — чтобы найти свою<br/>⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
             <div className="t-hero-bottom">
               <div>
                 <div className="t-orig-price" style={{fontSize:13}}>149 ₽</div>
@@ -843,11 +938,61 @@ function TariffsTab({ vkId, showToast }) {
             </div>
           </div>
 
-          {/* 2. Собери свой пакет — сразу после пробного */}
-          <div style={{padding:'18px 16px 2px',fontSize:18,fontWeight:900,color:'#fff'}}>🎨 Собери свой пакет</div>
-          <div style={{padding:'0 16px 10px',fontSize:12,color:'#888'}}>Выбери версию и количество фото</div>
+          {/* 2. Гайд: 3 версии */}
+          <div className="version-guide">
+            <div className="version-intro">
+              <div className="version-intro-title">Есть 3 версии нейрофотосессии</div>
+              <div className="version-intro-sub">Они дают разный результат на одном и том же фото. Попробуй все три</div>
+            </div>
+            <div className="version-cards">
+              <div className="version-card std">
+                <div className="version-card-icon">⭐</div>
+                <div className="version-card-name">Стандарт</div>
+                <div className="version-card-desc">Быстро и аккуратно. Чёткий результат</div>
+                <div className="version-card-who">Большинству</div>
+              </div>
+              <div className="version-card v2">
+                <div className="version-card-icon">✨</div>
+                <div className="version-card-name">Версия 2</div>
+                <div className="version-card-desc">Мягче, детальнее. Красивее для портретов</div>
+                <div className="version-card-who">Не всем</div>
+              </div>
+              <div className="version-card pro">
+                <div className="version-card-icon">💎</div>
+                <div className="version-card-name">Про</div>
+                <div className="version-card-desc">Максимум чёткости. Студийный уровень</div>
+                <div className="version-card-who">Немногим</div>
+              </div>
+            </div>
+            <div className="version-tip" onClick={() => buy('trial')}>
+              <div className="version-tip-body">
+                Большинство берёт тариф наугад и получает не то, что ожидало. Правильный путь: сначала попробуй все три версии на своём фото, выбери свою и только потом бери полный тариф.
+              </div>
+              <div className="vtip-cta">
+                <div className="vtip-cta-left">
+                  <div className="vtip-cta-label">Пробный пакет · 3 фото</div>
+                  <div className="vtip-cta-sub">⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
+                </div>
+                <div style={{textAlign:'right'}}>
+                  <div style={{fontSize:12,color:'#888',textDecoration:'line-through'}}>149 ₽</div>
+                  <div className="vtip-cta-price">74 ₽</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-          {/* Q-tabs */}
+          {/* 3. Конструктор «Собери свой формат» */}
+          <div className="builder-top-banner" onClick={() => setBuilderOpen(true)}>
+            <div className="builder-top-badge">🏗 СОБЕРИ СВОЙ ФОРМАТ — ВЫГОДНЕЕ</div>
+            <div className="builder-top-title">Свой набор</div>
+            <div className="builder-top-sub">Стандарт · Версия 2 · Про · Ню · Семья · Видео<br/>Выбираешь сам сколько каких — чем больше, тем дешевле</div>
+            <div style={{marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div style={{fontSize:18,opacity:.35}}>🍌</div>
+              <div style={{background:'linear-gradient(135deg,#22c55e,#16a34a)',color:'#fff',fontSize:13,fontWeight:800,padding:'7px 18px',borderRadius:10}}>Собрать →</div>
+            </div>
+          </div>
+
+          {/* 4. Q-tabs */}
           <div className="q-tabs-wrap">
             <div className="q-tabs-row" style={{gridTemplateColumns:'repeat(3,1fr)'}}>
               {[['std','⭐ Стандарт'],['v2','✨ Версия 2'],['pro','💎 Про']].map(([k,l]) => (
@@ -876,66 +1021,10 @@ function TariffsTab({ vkId, showToast }) {
               <div style={{fontSize:13,color:'#777'}}>Появится при следующем обновлении</div>
             </div>
           ) : (
-            <div className="q-panel active">
+            <div className="q-panel active" style={{paddingBottom:40}}>
               <TariffList tariffs={getTariffs()} busyKey={busyKey} onBuy={buy} />
             </div>
           )}
-
-          {/* 3. Выгодные наборы */}
-          <div className="t-mix-wrap">
-            <div className="t-mix-header">
-              📦 Выгодные наборы
-              <span className="t-mix-header-badge">ВСЁ ВМЕСТЕ</span>
-            </div>
-            <div className="t-list">
-              {MIX_TARIFFS.map(t => (
-                <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => buy(t.key)}>
-                  <div className="t-row-qty" style={{flexDirection:'column',alignItems:'flex-start',gap:3}}>
-                    <span>{t.label}</span>
-                    <span style={{fontSize:11,color:'#888',fontWeight:500}}>{t.sub}</span>
-                  </div>
-                  <div className="t-row-right">
-                    <div style={{textAlign:'right'}}>
-                      <span className="t-orig-price">{t.price}</span>
-                      <div className="t-row-price">{discountedPrice(t.price)}</div>
-                    </div>
-                    <div className="t-save-badge best">−50%</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 4. Алмазы — внизу Новичок */}
-          <div style={{padding:'18px 16px 4px',fontSize:18,fontWeight:900,color:'#fff'}}>💎 Алмазы</div>
-          <div style={{padding:'0 16px 4px',fontSize:12,color:'#888',lineHeight:1.5}}>
-            Для профи-моделей — Flux, GPT, Grok и других<br/>
-            <span style={{color:'#4ade80',fontWeight:700}}>Сейчас: платишь 100 ₽ — получаешь 200 💎</span>
-          </div>
-          <div className="t-list" style={{padding:'8px 16px 40px'}}>
-            {DIAMOND_TARIFFS.map(t => {
-              const origNum = parseInt(t.price.replace(/\s/g,''))
-              const discNum = Math.floor(origNum * 0.5)
-              const diamondNum = parseInt(t.label.replace(/\D/g,''))
-              return (
-                <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => buy(t.key)}>
-                  <div className="t-row-qty" style={{flexDirection:'column',alignItems:'flex-start',gap:2}}>
-                    <span>{t.label} {t.popular && <span className="pop-label">Хит</span>}</span>
-                    <span style={{fontSize:11,color:'#4ade80',fontWeight:600}}>
-                      {discNum} ₽ → {diamondNum} 💎 ({Math.round(diamondNum/discNum*100)/100} 💎/₽)
-                    </span>
-                  </div>
-                  <div className="t-row-right">
-                    <div style={{textAlign:'right'}}>
-                      <span className="t-orig-price">{t.price}</span>
-                      <div className="t-row-price">{discNum.toLocaleString('ru-RU')} ₽</div>
-                    </div>
-                    <div className="t-save-badge best">×2 💎</div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
         </>
       )}
 
@@ -961,6 +1050,8 @@ function TariffsTab({ vkId, showToast }) {
           ))}
         </div>
       )}
+
+      <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
     </>
   )
 }
