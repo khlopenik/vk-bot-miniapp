@@ -13,7 +13,7 @@
 
 html, body, #root {
   height: 100%;
-  background: var(--bg);
+  background: #060610;
   color: #fff;
   font-family: -apple-system, 'SF Pro Display', BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;

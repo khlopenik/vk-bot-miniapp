@@ -752,9 +752,14 @@ function TariffsTab({ vkId, showToast }) {
     setBusyKey(key)
     try {
       const r = await api.pay(vkId, key)
-      if (r.confirmation_url) await bridge.send('VKWebAppOpenLink', { link: r.confirmation_url })
-      else showToast('Ошибка оплаты')
-    } catch (e) { showToast('Ошибка: ' + (e?.message || 'попробуй позже')) }
+      if (r.confirmation_url) {
+        try {
+          await bridge.send('VKWebAppOpenLink', { link: r.confirmation_url })
+        } catch {
+          window.open(r.confirmation_url, '_blank')
+        }
+      } else showToast('Ошибка оплаты')
+    } catch (e) { showToast('Ошибка: ' + (e?.message || JSON.stringify(e) || 'попробуй позже')) }
     finally { setBusyKey(null) }
   }
 
