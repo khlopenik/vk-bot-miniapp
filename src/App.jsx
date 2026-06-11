@@ -1057,18 +1057,16 @@ function TariffsTab({ vkId, showToast }) {
           <div className="pay-modal" onClick={e => e.stopPropagation()}>
             <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
             <div className="pay-modal-desc">Нажми кнопку ниже, чтобы перейти к оплате. После оплаты алмазы зачислятся автоматически.</div>
-            <a
+            <button
               className="pay-modal-btn"
-              href={payUrl}
-              target="_blank"
-              rel="noreferrer"
               onClick={() => {
-                bridge.send('VKWebAppOpenLink', { link: payUrl }).catch(() => {})
-                setTimeout(() => setPayUrl(null), 500)
+                bridge.send('VKWebAppOpenLink', { link: payUrl })
+                  .catch(() => { window.location.href = payUrl })
+                setPayUrl(null)
               }}
             >
               Перейти к оплате →
-            </a>
+            </button>
             <button className="pay-modal-cancel" onClick={() => setPayUrl(null)}>Отмена</button>
           </div>
         </div>
