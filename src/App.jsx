@@ -498,7 +498,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs }) {
                   <div className="card-overlay">
                     <div className="card-name-ov">{s.name}</div>
                   </div>
-                  <div className="badge-hot">⭐ ХИТ</div>
+                  {s.hot && <div className="badge-hot">⭐ ХИТ</div>}
                 </div>
                 <button className="card-btn" onClick={() => onRepeat(s)}>✨ Повторить</button>
               </div>

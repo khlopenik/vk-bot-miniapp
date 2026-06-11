@@ -25,7 +25,7 @@ html, body, #root {
 .vkuiTabbar { display: none !important; }
 
 /* ── Layout wrapper ── */
-.frame-app { position: relative; min-height: 100vh; background: var(--bg); }
+.frame-app { position: relative; min-height: 100vh; background: var(--bg); max-width: 480px; margin: 0 auto; }
 .page-wrap {
   padding-bottom: calc(var(--tab-h) + 16px);
   overflow-y: auto;
