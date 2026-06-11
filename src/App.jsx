@@ -829,11 +829,11 @@ function TariffsTab({ vkId, showToast }) {
 
       {level === 'novice' && (
         <>
-          {/* Hero trial */}
+          {/* 1. Hero trial */}
           <div className="t-hero" onClick={() => buy('trial')}>
             <div className="t-hero-badge">🎁 ДЛЯ НОВИЧКОВ · САМЫЙ ПОПУЛЯРНЫЙ</div>
-            <div className="t-hero-name">Пробный пакет</div>
-            <div className="t-hero-desc">3 фото во всех версиях сразу — чтобы найти свою<br/>⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
+            <div className="t-hero-name">Пробный пакет · 3 фото</div>
+            <div className="t-hero-desc">⭐ Стандарт · ✨ Версия 2 · 💎 Про — попробуй все три сразу</div>
             <div className="t-hero-bottom">
               <div>
                 <div className="t-orig-price" style={{fontSize:13}}>149 ₽</div>
@@ -843,75 +843,7 @@ function TariffsTab({ vkId, showToast }) {
             </div>
           </div>
 
-          {/* Version guide */}
-          <div className="version-guide">
-            <div className="version-intro">
-              <div className="version-intro-title">Есть 3 версии нейрофотосессии</div>
-              <div className="version-intro-sub">Они дают разный результат на одном фото. Попробуй все три</div>
-            </div>
-            <div className="version-cards">
-              <div className="version-card std">
-                <div className="version-card-icon">⭐</div>
-                <div className="version-card-name">Стандарт</div>
-                <div className="version-card-desc">Быстро и аккуратно. Чёткий результат</div>
-                <div className="version-card-who">Большинству</div>
-              </div>
-              <div className="version-card v2">
-                <div className="version-card-icon">✨</div>
-                <div className="version-card-name">Версия 2</div>
-                <div className="version-card-desc">Мягче, детальнее. Красивее для портретов</div>
-                <div className="version-card-who">Не всем</div>
-              </div>
-              <div className="version-card pro">
-                <div className="version-card-icon">💎</div>
-                <div className="version-card-name">Про</div>
-                <div className="version-card-desc">Максимум чёткости. Студийный уровень</div>
-                <div className="version-card-who">Немногим</div>
-              </div>
-            </div>
-            <div className="version-tip" onClick={() => buy('trial')}>
-              <div className="version-tip-body">
-                Большинство берёт тариф наугад и получает не то, что ожидало. Правильный путь: сначала попробуй все три версии на своём фото, выбери свою и только потом бери полный тариф.
-              </div>
-              <div className="vtip-cta">
-                <div className="vtip-cta-left">
-                  <div className="vtip-cta-label">Пробный пакет · 3 фото</div>
-                  <div className="vtip-cta-sub">⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
-                </div>
-                <div style={{textAlign:'right'}}>
-                  <div style={{fontSize:12,color:'#888',textDecoration:'line-through'}}>149 ₽</div>
-                  <div className="vtip-cta-price">74 ₽</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Mix sets */}
-          <div className="t-mix-wrap">
-            <div className="t-mix-header">
-              📦 Выгодные наборы
-              <span className="t-mix-header-badge">ВСЁ ВМЕСТЕ</span>
-            </div>
-            <div className="t-list">
-              {MIX_TARIFFS.map(t => (
-                <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => buy(t.key)}>
-                  <div className="t-row-qty" style={{flexDirection:'column',alignItems:'flex-start',gap:3}}>
-                    <span>{t.label}</span>
-                    <span style={{fontSize:11,color:'#888',fontWeight:500}}>{t.sub}</span>
-                  </div>
-                  <div className="t-row-right">
-                    <div style={{textAlign:'right'}}>
-                      <span className="t-orig-price">{t.price}</span>
-                      <div className="t-row-price">{discountedPrice(t.price)}</div>
-                    </div>
-                    <div className="t-save-badge best">−50%</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Собери свой пакет */}
+          {/* 2. Собери свой пакет — сразу после пробного */}
           <div style={{padding:'18px 16px 2px',fontSize:18,fontWeight:900,color:'#fff'}}>🎨 Собери свой пакет</div>
           <div style={{padding:'0 16px 10px',fontSize:12,color:'#888'}}>Выбери версию и количество фото</div>
 
@@ -948,6 +880,62 @@ function TariffsTab({ vkId, showToast }) {
               <TariffList tariffs={getTariffs()} busyKey={busyKey} onBuy={buy} />
             </div>
           )}
+
+          {/* 3. Выгодные наборы */}
+          <div className="t-mix-wrap">
+            <div className="t-mix-header">
+              📦 Выгодные наборы
+              <span className="t-mix-header-badge">ВСЁ ВМЕСТЕ</span>
+            </div>
+            <div className="t-list">
+              {MIX_TARIFFS.map(t => (
+                <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => buy(t.key)}>
+                  <div className="t-row-qty" style={{flexDirection:'column',alignItems:'flex-start',gap:3}}>
+                    <span>{t.label}</span>
+                    <span style={{fontSize:11,color:'#888',fontWeight:500}}>{t.sub}</span>
+                  </div>
+                  <div className="t-row-right">
+                    <div style={{textAlign:'right'}}>
+                      <span className="t-orig-price">{t.price}</span>
+                      <div className="t-row-price">{discountedPrice(t.price)}</div>
+                    </div>
+                    <div className="t-save-badge best">−50%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. Алмазы — внизу Новичок */}
+          <div style={{padding:'18px 16px 4px',fontSize:18,fontWeight:900,color:'#fff'}}>💎 Алмазы</div>
+          <div style={{padding:'0 16px 4px',fontSize:12,color:'#888',lineHeight:1.5}}>
+            Для профи-моделей — Flux, GPT, Grok и других<br/>
+            <span style={{color:'#4ade80',fontWeight:700}}>Сейчас: платишь 100 ₽ — получаешь 200 💎</span>
+          </div>
+          <div className="t-list" style={{padding:'8px 16px 40px'}}>
+            {DIAMOND_TARIFFS.map(t => {
+              const origNum = parseInt(t.price.replace(/\s/g,''))
+              const discNum = Math.floor(origNum * 0.5)
+              const diamondNum = parseInt(t.label.replace(/\D/g,''))
+              return (
+                <div key={t.key} className={`t-row${t.popular?' popular':''}`} onClick={() => buy(t.key)}>
+                  <div className="t-row-qty" style={{flexDirection:'column',alignItems:'flex-start',gap:2}}>
+                    <span>{t.label} {t.popular && <span className="pop-label">Хит</span>}</span>
+                    <span style={{fontSize:11,color:'#4ade80',fontWeight:600}}>
+                      {discNum} ₽ → {diamondNum} 💎 ({Math.round(diamondNum/discNum*100)/100} 💎/₽)
+                    </span>
+                  </div>
+                  <div className="t-row-right">
+                    <div style={{textAlign:'right'}}>
+                      <span className="t-orig-price">{t.price}</span>
+                      <div className="t-row-price">{discNum.toLocaleString('ru-RU')} ₽</div>
+                    </div>
+                    <div className="t-save-badge best">×2 💎</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </>
       )}
 
