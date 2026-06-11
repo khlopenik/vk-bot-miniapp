@@ -288,6 +288,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
   const stopTimer  = () => { clearInterval(timerRef.current); timerRef.current = null }
   const fmtTime    = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`
 
+  const fileInputRef = useRef(null)
   const pickPhoto = async () => {
     setError(null)
     try {
@@ -295,10 +296,16 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
       const file = r?.files?.[0] || r?.urls?.[0]
       const url = typeof file === 'string' ? file : file?.url
       if (url) setPhotoUrl(url)
-      else setError('Не удалось получить фото')
+      else fileInputRef.current?.click()
     } catch {
-      setError('Загрузка фото доступна в мобильном приложении VK')
+      fileInputRef.current?.click()
     }
+  }
+  const onFileChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const url = URL.createObjectURL(file)
+    setPhotoUrl(url)
   }
 
   const generate = async () => {
@@ -367,6 +374,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
             </div>
           </label>
       }
+      <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFileChange} />
       {photoUrl && (
         <button className="pro-other-btn" style={{marginTop:8,marginBottom:4}} onClick={() => setPhotoUrl('')}>Сменить фото</button>
       )}
@@ -559,6 +567,7 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, showToast }) {
   }
   const stopTimer = () => { clearInterval(timerRef.current); timerRef.current = null }
 
+  const fileInputRef2 = useRef(null)
   const pickPhoto = async () => {
     setError(null)
     try {
@@ -566,10 +575,15 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, showToast }) {
       const file = r?.files?.[0] || r?.urls?.[0]
       const url = typeof file === 'string' ? file : file?.url
       if (url) setPhotoUrl(url)
-      else setError('Не удалось получить фото')
+      else fileInputRef2.current?.click()
     } catch {
-      setError('Загрузка доступна только в мобильном приложении VK')
+      fileInputRef2.current?.click()
     }
+  }
+  const onFileChange2 = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoUrl(URL.createObjectURL(file))
   }
 
   const generate = async () => {
@@ -654,6 +668,8 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, showToast }) {
                 </div>
               </label>
           }
+
+          <input ref={fileInputRef2} type="file" accept="image/*" style={{display:'none'}} onChange={onFileChange2} />
 
           {error && (
             <div>
