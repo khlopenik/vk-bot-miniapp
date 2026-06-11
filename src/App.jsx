@@ -811,8 +811,8 @@ function TariffsTab({ vkId, showToast }) {
             <div className="t-hero-desc">3 фото во всех версиях сразу — чтобы найти свою<br/>⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
             <div className="t-hero-bottom">
               <div>
-                <div className="t-orig-price" style={{fontSize:13}}>298 ₽</div>
-                <div className="t-hero-price">149 ₽</div>
+                <div className="t-orig-price" style={{fontSize:13}}>149 ₽</div>
+                <div className="t-hero-price">74 ₽</div>
               </div>
               <div className="t-hero-cta">Купить →</div>
             </div>
@@ -928,10 +928,10 @@ function TariffsTab({ vkId, showToast }) {
               <div className="t-row-right">
                 {t.perPhoto && <div className="t-row-per">{t.perPhoto}</div>}
                 <div style={{textAlign:'right'}}>
-                  <span className="t-orig-price">{origPrice(t.price)}</span>
-                  <div className="t-row-price">{t.price}</div>
+                  <span className="t-orig-price">{t.price}</span>
+                  <div className="t-row-price">{discountedPrice(t.price)}</div>
                 </div>
-                {t.discount && <div className={`t-save-badge${t.best?' best':''}`}>{t.discount}</div>}
+                <div className="t-save-badge best">−50%</div>
               </div>
             </div>
           ))}
@@ -941,11 +941,11 @@ function TariffsTab({ vkId, showToast }) {
   )
 }
 
-/* Вычисляет оригинальную цену до скидки 50% */
-function origPrice(priceStr) {
+/* Цена со скидкой 50% */
+function discountedPrice(priceStr) {
   const num = parseInt(priceStr.replace(/\s/g, ''))
-  if (isNaN(num)) return null
-  return (num * 2).toLocaleString('ru-RU') + ' ₽'
+  if (isNaN(num)) return priceStr
+  return Math.floor(num * 0.5).toLocaleString('ru-RU') + ' ₽'
 }
 
 function TariffList({ tariffs, busyKey, onBuy }) {
@@ -959,10 +959,10 @@ function TariffList({ tariffs, busyKey, onBuy }) {
           <div className="t-row-right">
             {t.perPhoto && <div className="t-row-per">{t.perPhoto}</div>}
             <div style={{textAlign:'right'}}>
-              <span className="t-orig-price">{origPrice(t.price)}</span>
-              <div className="t-row-price">{t.price}</div>
+              <span className="t-orig-price">{t.price}</span>
+              <div className="t-row-price">{discountedPrice(t.price)}</div>
             </div>
-            {t.discount && <div className={`t-save-badge${t.best?' best':''}`}>{t.discount}</div>}
+            <div className="t-save-badge best">−50%</div>
           </div>
         </div>
       ))}
