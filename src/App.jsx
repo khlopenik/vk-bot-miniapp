@@ -1059,22 +1059,16 @@ function TariffsTab({ vkId, showToast }) {
   )
 }
 
-/* Модал оплаты — надёжно открывает ссылку YooKassa на любой платформе */
+/* Модал оплаты — открывает ссылку YooKassa через мост VK (sandbox-safe) */
 function PayModal({ url, onClose }) {
-  // vk_platform приходит в query-параметрах запуска мини-аппа
-  const platform = new URLSearchParams(window.location.search).get('vk_platform') || ''
-  const isDesktop = platform.includes('desktop') || platform.includes('web') && !platform.includes('mobile')
-
   const openPay = () => {
-    // На десктопе window.open в обработчике клика не блокируется попап-фильтром
-    if (isDesktop) {
-      const w = window.open(url, '_blank')
-      if (!w) bridge.send('VKWebAppOpenLink', { link: url }).catch(() => {})
+    // VKWebAppOpenLink — единственный метод, не блокируемый песочницей VK.
+    // На телефоне открывает оплату штатно. На десктоп-вебе VK откроет в браузере.
+    if (bridge.supports && bridge.supports('VKWebAppOpenLink')) {
+      bridge.send('VKWebAppOpenLink', { link: url })
     } else {
-      bridge.send('VKWebAppOpenLink', { link: url }).catch(() => {
-        const w = window.open(url, '_blank')
-        if (!w) window.location.href = url
-      })
+      // вне VK (например локальная отладка в браузере) — обычная вкладка
+      window.open(url, '_blank')
     }
     onClose()
   }
