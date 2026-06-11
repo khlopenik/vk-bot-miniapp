@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import bridge from '@vkontakte/vk-bridge'
 import { AppRoot } from '@vkontakte/vkui'
+import '@vkontakte/vkui/dist/vkui.css'
 import { api } from './api'
 import './App.css'
 
@@ -189,7 +190,7 @@ export default function App() {
   const openGalleryStyle = (style) => setGalleryStyle(style)
 
   return (
-    <AppRoot>
+    <AppRoot appearance="dark">
       <div className="frame-app">
         {/* Экран генерации из галереи (поверх всего) */}
         {galleryStyle && (
