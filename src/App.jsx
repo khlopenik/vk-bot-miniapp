@@ -711,7 +711,7 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, showToast }) {
                     </button>
                   ))}
                 </div>
-                <div style={{textAlign:'center',padding:'20px 0 4px',color:'#444',fontSize:13}}>Клон голоса — скоро</div>
+                <div style={{textAlign:'center',padding:'20px 0 4px',color:'#777',fontSize:13}}>Клон голоса — скоро</div>
               </div>
             ) : allGroups.map(g => (
               <div key={g.label}>
@@ -917,7 +917,7 @@ function TariffsTab({ vkId, showToast }) {
             <div style={{textAlign:'center',padding:'32px 16px 24px',color:'#555',lineHeight:1.7}}>
               <div style={{fontSize:28,marginBottom:10}}>🎬</div>
               <div style={{fontSize:15,fontWeight:700,color:'#888',marginBottom:6}}>Оживление фото</div>
-              <div style={{fontSize:13,color:'#444'}}>Появится при следующем обновлении</div>
+              <div style={{fontSize:13,color:'#777'}}>Появится при следующем обновлении</div>
             </div>
           ) : (
             <div className="q-panel active">
