@@ -853,7 +853,10 @@ function TariffsTab({ vkId, showToast }) {
                   <div className="vtip-cta-label">Пробный пакет · 3 фото</div>
                   <div className="vtip-cta-sub">⭐ Стандарт · ✨ Версия 2 · 💎 Про</div>
                 </div>
-                <div className="vtip-cta-price">149 ₽</div>
+                <div style={{textAlign:'right'}}>
+                  <div style={{fontSize:12,color:'#555',textDecoration:'line-through'}}>149 ₽</div>
+                  <div className="vtip-cta-price">74 ₽</div>
+                </div>
               </div>
             </div>
           </div>
@@ -872,7 +875,11 @@ function TariffsTab({ vkId, showToast }) {
                     <span style={{fontSize:11,color:'#555',fontWeight:500}}>{t.sub}</span>
                   </div>
                   <div className="t-row-right">
-                    <div className="t-row-price">{t.price}</div>
+                    <div style={{textAlign:'right'}}>
+                      <span className="t-orig-price">{t.price}</span>
+                      <div className="t-row-price">{discountedPrice(t.price)}</div>
+                    </div>
+                    <div className="t-save-badge best">−50%</div>
                   </div>
                 </div>
               ))}
@@ -1104,13 +1111,13 @@ function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
             Приводи людей в FRAME и получай <span style={{color:'#4ade80',fontWeight:700}}>30%</span> с каждой их оплаты — навсегда. 🤑
           </div>
           <button className="big-btn purple" style={{marginTop:12}}
-            onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/club239444342' })}>
+            onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=club239444342' })}>
             🚀 Стать партнёром
           </button>
         </div>
 
         {/* Support */}
-        <button className="big-btn dark" onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/club239444342' })}>
+        <button className="big-btn dark" onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=club239444342' })}>
           💬 Написать в поддержку
         </button>
 

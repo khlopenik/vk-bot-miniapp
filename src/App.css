@@ -185,7 +185,7 @@ html, body, #root {
 .vtip-cta { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg,rgba(124,92,191,.3),rgba(91,141,238,.2)); border: 1px solid rgba(124,92,191,.4); border-radius: 14px; padding: 12px 16px; }
 .vtip-cta-label { font-size: 14px; font-weight: 900; color: #fff; margin-bottom: 2px; }
 .vtip-cta-sub { font-size: 11px; color: #888; }
-.vtip-cta-price { font-size: 22px; font-weight: 900; color: var(--purple-l); }
+.vtip-cta-price { font-size: 22px; font-weight: 900; color: #4ade80; }
 
 /* Mix wrap */
 .t-mix-wrap { margin: 14px 12px 0; background: linear-gradient(135deg,rgba(124,92,191,.1),rgba(91,141,238,.06)); border: 1.5px solid rgba(124,92,191,.3); border-radius: 20px; padding: 14px 12px 12px; }
