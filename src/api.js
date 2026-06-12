@@ -1,16 +1,23 @@
 export const API_BASE = 'https://vk-bot-2vns.onrender.com/api'
 
-async function req(path, opts = {}) {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  })
-  if (!res.ok) {
-    let err
-    try { err = await res.json() } catch { err = {} }
-    throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { code: err.error, status: res.status })
+async function req(path, opts = {}, timeoutMs = 25000) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      signal: ctrl.signal,
+      ...opts,
+    })
+    if (!res.ok) {
+      let err
+      try { err = await res.json() } catch { err = {} }
+      throw Object.assign(new Error(err.error || `HTTP ${res.status}`), { code: err.error, status: res.status })
+    }
+    return res.json()
+  } finally {
+    clearTimeout(timer)
   }
-  return res.json()
 }
 
 export const api = {
@@ -18,10 +25,11 @@ export const api = {
   tariffs: () => req('/tariffs'),
   models: () => req('/models'),
   history: (vk_id) => req(`/history?vk_id=${vk_id}`),
-  pay: (vk_id, tariff) => req('/pay', { method: 'POST', body: JSON.stringify({ vk_id, tariff }) }),
+  // pay: Render cold start ~30 сек → timeout 60 сек
+  pay: (vk_id, tariff) => req('/pay', { method: 'POST', body: JSON.stringify({ vk_id, tariff }) }, 60000),
   support: (vk_id, kind) => req('/support', { method: 'POST', body: JSON.stringify({ vk_id, kind }) }),
   generate: (vk_id, photo_url, model_key, prompt) =>
-    req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt }) }),
+    req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt }) }, 120000),
   categories: () => req('/categories'),
   styles: (category_key) => req(`/styles/${category_key}`),
   styleOne: (style_id) => req(`/style-one/${style_id}`),

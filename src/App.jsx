@@ -866,17 +866,23 @@ function TariffsTab({ vkId, showToast }) {
     if (!vkId) { showToast('Нет vk_id'); return }
     if (busyKey) return
     setBusyKey(key)
-    showToast('⏳ Создаём ссылку...')
+    showToast('⏳ Создаём оплату... (~30 сек)')
     try {
       const r = await api.pay(vkId, key)
-      if (r.ok) {
-        showToast('💳 Открой сообщения с ботом — там кнопка оплаты')
-        // Открываем чат с ботом чтобы пользователь сразу увидел ссылку
+      if (r.ok || r.sent_to_chat) {
+        showToast('✅ Открой сообщения с ботом — там кнопка оплаты 💳')
         setTimeout(() => {
           bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
-        }, 1200)
+        }, 1500)
       } else showToast('Ошибка оплаты')
-    } catch (e) { showToast('Ошибка: ' + (e?.message || JSON.stringify(e) || 'попробуй позже')) }
+    } catch (e) {
+      const msg = e?.message || ''
+      if (msg.includes('abort') || msg.includes('timeout')) {
+        showToast('⏳ Сервер загружается — повтори через 30 сек')
+      } else {
+        showToast('Ошибка: ' + (msg || 'попробуй позже'))
+      }
+    }
     finally { setBusyKey(null) }
   }
 
