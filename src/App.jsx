@@ -1250,7 +1250,13 @@ function PartnerDashboard({ me, vkId, showToast }) {
       <button className={`ref-copy-btn${copied?' copied':''}`} onClick={copy} style={{marginTop:8}}>
         {copied ? '✅ Скопировано!' : '📋 Скопировать партнёрскую ссылку'}
       </button>
-      <div className="partner-payout-note">Выплаты — по запросу в поддержку @l_khlopenik</div>
+      <div className="partner-payout-note">
+        Выплаты — по запросу в поддержку:{' '}
+        <span
+          style={{color:'#a78bfa',cursor:'pointer',textDecoration:'underline'}}
+          onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/l_khlopenik' }).catch(()=>{})}
+        >@l_khlopenik</span>
+      </div>
     </div>
   )
 }
