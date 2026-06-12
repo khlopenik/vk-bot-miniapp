@@ -500,3 +500,25 @@ html, body, #root {
   cursor: pointer; padding: 8px;
 }
 .t-row.busy { opacity: .6; pointer-events: none; }
+
+/* ── PayWidget (YooKassa embedded) ── */
+.pay-modal.wide { max-width: 420px; text-align: left; }
+.pay-modal-loading { font-size: 14px; color: #aaa; text-align: center; padding: 20px 0; }
+#yk-pay-container { width: 100%; }
+#yk-pay-container iframe { border-radius: 12px !important; }
+
+/* ── Partner dashboard ── */
+.partner-dashboard {
+  background: linear-gradient(135deg, rgba(74,222,128,.1), rgba(124,92,191,.15));
+  border: 1.5px solid rgba(74,222,128,.35);
+  border-radius: 18px; padding: 20px; margin-bottom: 12px;
+}
+.partner-dash-title { font-size: 18px; font-weight: 800; color: #4ade80; margin-bottom: 4px; }
+.partner-dash-pct { font-size: 13px; color: #aaa; margin-bottom: 16px; }
+.partner-dash-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.partner-stat {
+  background: rgba(255,255,255,.06); border-radius: 12px;
+  padding: 14px 12px; text-align: center;
+}
+.partner-stat-num { font-size: 22px; font-weight: 800; color: #4ade80; }
+.partner-stat-label { font-size: 11px; color: #888; margin-top: 4px; }

@@ -861,19 +861,17 @@ function TariffsTab({ vkId, showToast }) {
   const [promoStatus, setPromoStatus] = useState(null)
   const [busyKey, setBusyKey] = useState(null)
   const [builderOpen, setBuilderOpen] = useState(false)
-  const [payUrl, setPayUrl] = useState(null)
-  const [paySent, setPaySent] = useState(false)
+  const [payToken, setPayToken] = useState(null)
 
   const buy = async (key) => {
     if (!vkId) { showToast('Нет vk_id'); return }
     if (busyKey) return
     setBusyKey(key)
-    showToast('⏳ Создаём ссылку для оплаты...')
+    showToast('⏳ Создаём форму оплаты...')
     try {
       const r = await api.pay(vkId, key)
-      if (r.confirmation_url) {
-        setPayUrl(r.confirmation_url)
-        setPaySent(!!r.sent_to_chat)
+      if (r.confirmation_token) {
+        setPayToken(r.confirmation_token)
       } else showToast('Ошибка оплаты')
     } catch (e) { showToast('Ошибка: ' + (e?.message || JSON.stringify(e) || 'попробуй позже')) }
     finally { setBusyKey(null) }
@@ -1054,37 +1052,63 @@ function TariffsTab({ vkId, showToast }) {
 
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
 
-      {payUrl && (
-        <PayModal url={payUrl} sentToChat={paySent} onClose={() => setPayUrl(null)} />
+      {payToken && (
+        <PayWidget
+          token={payToken}
+          onSuccess={() => { setPayToken(null); showToast('✅ Оплата прошла! Кредиты зачислены 💎') }}
+          onClose={() => setPayToken(null)}
+        />
       )}
     </>
   )
 }
 
-/* Модал оплаты. Ссылка также продублирована ботом в личные сообщения —
-   это гарантированный путь, т.к. встроенный браузер VK не открывает ЮKassa. */
-function PayModal({ url, sentToChat, onClose }) {
-  const openPay = () => {
-    if (bridge.supports && bridge.supports('VKWebAppOpenLink')) {
-      bridge.send('VKWebAppOpenLink', { link: url })
-    } else {
-      window.open(url, '_blank')
+/* Встроенный виджет оплаты YooKassa — карточка прямо в приложении, без ссылок и редиректов */
+function PayWidget({ token, onSuccess, onClose }) {
+  const [loaded, setLoaded] = useState(false)
+  const checkoutRef = useRef(null)
+
+  useEffect(() => {
+    if (!token) return
+    const init = () => {
+      try {
+        checkoutRef.current = new window.YooMoneyCheckoutWidget({
+          confirmation_token: token,
+          return_url: 'https://vk.com/app54628838',
+          error_callback(err) {
+            console.error('YK widget error:', err)
+          },
+          customization: {
+            colors: { controlPrimary: '#a78bfa', background: { enabled: false } },
+          },
+        })
+        checkoutRef.current.render('yk-pay-container')
+        checkoutRef.current.on('success', () => {
+          checkoutRef.current?.destroy()
+          checkoutRef.current = null
+          onSuccess()
+        })
+        setLoaded(true)
+      } catch(e) { console.error('YK init error:', e) }
     }
-    onClose()
-  }
+
+    if (window.YooMoneyCheckoutWidget) {
+      init()
+    } else {
+      const s = document.createElement('script')
+      s.src = 'https://yookassa.ru/checkout-widget/v1/checkout-widget.js'
+      s.onload = init
+      document.head.appendChild(s)
+    }
+    return () => { checkoutRef.current?.destroy(); checkoutRef.current = null }
+  }, [token])
 
   return (
     <div className="pay-modal-overlay" onClick={onClose}>
-      <div className="pay-modal" onClick={e => e.stopPropagation()}>
-        <div className="pay-modal-title">💳 Кнопка оплаты в сообщениях</div>
-        <div className="pay-modal-desc">
-          {sentToChat
-            ? 'Закрой приложение и открой сообщения с ботом FRAME — там кнопка «💳 Оплатить». Нажми её, чтобы оплатить. После оплаты алмазы зачислятся автоматически 💎'
-            : 'Нажми «Оплатить здесь». После оплаты алмазы зачислятся автоматически.'}
-        </div>
-        {sentToChat
-          ? <button className="pay-modal-btn" onClick={() => { bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }); onClose() }}>Открыть сообщения с ботом →</button>
-          : <button className="pay-modal-btn" onClick={openPay}>Оплатить здесь →</button>}
+      <div className="pay-modal wide" onClick={e => e.stopPropagation()}>
+        <div className="pay-modal-title">💳 Оплата</div>
+        {!loaded && <div className="pay-modal-loading">⏳ Загружаем форму оплаты...</div>}
+        <div id="yk-pay-container" style={{minHeight: loaded ? 340 : 0}} />
         <button className="pay-modal-cancel" onClick={onClose}>Закрыть</button>
       </div>
     </div>
@@ -1161,18 +1185,18 @@ function HistoryTab({ vkId, showToast }) {
   )
 }
 
-/* Поддержка → сразу открываем личку админа (чат с тобой), человек пишет напрямую.
-   Партнёр → человек становится партнёром, админу приходит уведомление. */
-async function openSupport(vkId, kind, showToast) {
+/* Поддержка → открываем личку админа напрямую.
+   Партнёр → становится партнёром, callback с обновлёнными данными. */
+async function openSupport(vkId, kind, showToast, onPartnerDone) {
   if (!vkId) { showToast && showToast('Нет vk_id'); return }
   try {
     const r = await api.support(vkId, kind)
     if (kind === 'partner') {
-      showToast && showToast('🎉 Ты теперь партнёр! Делись своей ссылкой ниже 👇')
+      showToast && showToast('🎉 Ты теперь партнёр! Приводи людей и зарабатывай 30% 🤑')
+      onPartnerDone && onPartnerDone(r)
     } else {
-      // поддержка — перебрасываем в личные сообщения с тобой
       bridge.send('VKWebAppOpenLink', { link: r.admin_link || 'https://vk.com/l_khlopenik' })
-        .catch(() => showToast && showToast('Напиши нам: vk.com/l_khlopenik'))
+        .catch(() => showToast && showToast('Напиши: vk.com/l_khlopenik'))
     }
   } catch {
     showToast && showToast('Не получилось, попробуй ещё раз')
@@ -1180,10 +1204,13 @@ async function openSupport(vkId, kind, showToast) {
 }
 
 /* ────────────────────────────────── ПРОФИЛЬ ── */
-function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
+function ProfileTab({ vkId, me: meProp, onGoTariffs, showToast }) {
   const [promo, setPromo] = useState('')
   const [promoMsg, setPromoMsg] = useState(null)
   const [copied, setCopied] = useState(false)
+  // локальный патч me после становления партнёром (без перезагрузки страницы)
+  const [meOverride, setMeOverride] = useState(null)
+  const me = meOverride ? { ...meProp, ...meOverride } : meProp
 
   const refLink = vkId ? `https://vk.com/app54628838#ref${vkId}` : 'https://vk.com/app54628838'
 
@@ -1196,6 +1223,17 @@ function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
   const applyPromo = () => {
     if (!promo.trim()) return
     setPromoMsg({ ok: false, msg: 'Промокод не найден' })
+  }
+
+  const handleBecomePartner = () => {
+    openSupport(vkId, 'partner', showToast, (r) => {
+      setMeOverride({
+        is_partner: true,
+        partner_pct: r.partner_pct ?? 30,
+        partner_paid: r.partner_paid ?? 0,
+        ref_count: r.ref_count ?? me?.ref_count ?? 0,
+      })
+    })
   }
 
   return (
@@ -1265,17 +1303,34 @@ function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
           </button>
         </div>
 
-        {/* Partner */}
-        <div className="info-row">
-          <div className="info-row-title">💰 Партнёрская программа</div>
-          <div className="info-row-text">
-            Приводи людей в FRAME и получай <span style={{color:'#4ade80',fontWeight:700}}>30%</span> с каждой их оплаты — навсегда. 🤑
+        {/* Partner — дашборд если уже партнёр, кнопка если нет */}
+        {me?.is_partner ? (
+          <div className="partner-dashboard">
+            <div className="partner-dash-title">🤝 Вы партнёр FRAME</div>
+            <div className="partner-dash-pct">{me.partner_pct ?? 30}% с каждой оплаты реферала</div>
+            <div className="partner-dash-stats">
+              <div className="partner-stat">
+                <div className="partner-stat-num">{me.ref_count ?? 0}</div>
+                <div className="partner-stat-label">Рефералов</div>
+              </div>
+              <div className="partner-stat">
+                <div className="partner-stat-num">{Number(me.partner_paid ?? 0).toLocaleString('ru-RU')} ₽</div>
+                <div className="partner-stat-label">Заработано</div>
+              </div>
+            </div>
+            <div style={{fontSize:12,color:'#888',marginTop:8,textAlign:'center'}}>Делись реферальной ссылкой выше 👆</div>
           </div>
-          <button className="big-btn purple" style={{marginTop:12}}
-            onClick={() => openSupport(vkId, 'partner', showToast)}>
-            🚀 Стать партнёром
-          </button>
-        </div>
+        ) : (
+          <div className="info-row">
+            <div className="info-row-title">💰 Партнёрская программа</div>
+            <div className="info-row-text">
+              Приводи людей в FRAME и получай <span style={{color:'#4ade80',fontWeight:700}}>30%</span> с каждой их оплаты — навсегда. 🤑
+            </div>
+            <button className="big-btn purple" style={{marginTop:12}} onClick={handleBecomePartner}>
+              🚀 Стать партнёром
+            </button>
+          </div>
+        )}
 
         {/* Support */}
         <button className="big-btn dark" onClick={() => openSupport(vkId, 'support', showToast)}>
