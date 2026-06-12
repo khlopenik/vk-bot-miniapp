@@ -862,6 +862,7 @@ function TariffsTab({ vkId, showToast }) {
   const [busyKey, setBusyKey] = useState(null)
   const [builderOpen, setBuilderOpen] = useState(false)
   const [payUrl, setPayUrl] = useState(null)
+  const [paySent, setPaySent] = useState(false)
 
   const buy = async (key) => {
     if (!vkId) { showToast('Нет vk_id'); return }
@@ -872,6 +873,7 @@ function TariffsTab({ vkId, showToast }) {
       const r = await api.pay(vkId, key)
       if (r.confirmation_url) {
         setPayUrl(r.confirmation_url)
+        setPaySent(!!r.sent_to_chat)
       } else showToast('Ошибка оплаты')
     } catch (e) { showToast('Ошибка: ' + (e?.message || JSON.stringify(e) || 'попробуй позже')) }
     finally { setBusyKey(null) }
@@ -1053,21 +1055,19 @@ function TariffsTab({ vkId, showToast }) {
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
 
       {payUrl && (
-        <PayModal url={payUrl} onClose={() => setPayUrl(null)} />
+        <PayModal url={payUrl} sentToChat={paySent} onClose={() => setPayUrl(null)} />
       )}
     </>
   )
 }
 
-/* Модал оплаты — открывает ссылку YooKassa через мост VK (sandbox-safe) */
-function PayModal({ url, onClose }) {
+/* Модал оплаты. Ссылка также продублирована ботом в личные сообщения —
+   это гарантированный путь, т.к. встроенный браузер VK не открывает ЮKassa. */
+function PayModal({ url, sentToChat, onClose }) {
   const openPay = () => {
-    // VKWebAppOpenLink — единственный метод, не блокируемый песочницей VK.
-    // На телефоне открывает оплату штатно. На десктоп-вебе VK откроет в браузере.
     if (bridge.supports && bridge.supports('VKWebAppOpenLink')) {
       bridge.send('VKWebAppOpenLink', { link: url })
     } else {
-      // вне VK (например локальная отладка в браузере) — обычная вкладка
       window.open(url, '_blank')
     }
     onClose()
@@ -1076,10 +1076,14 @@ function PayModal({ url, onClose }) {
   return (
     <div className="pay-modal-overlay" onClick={onClose}>
       <div className="pay-modal" onClick={e => e.stopPropagation()}>
-        <div className="pay-modal-title">💳 Переход к оплате</div>
-        <div className="pay-modal-desc">Безопасная оплата через ЮKassa. После оплаты алмазы зачислятся автоматически.</div>
-        <button className="pay-modal-btn" onClick={openPay}>Оплатить →</button>
-        <button className="pay-modal-cancel" onClick={onClose}>Отмена</button>
+        <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
+        <div className="pay-modal-desc">
+          {sentToChat
+            ? '📩 Мы отправили ссылку в сообщения бота — открой чат и нажми на неё, чтобы оплатить. После оплаты алмазы зачислятся автоматически.'
+            : 'Нажми «Оплатить». После оплаты алмазы зачислятся автоматически.'}
+        </div>
+        <button className="pay-modal-btn" onClick={openPay}>Оплатить здесь →</button>
+        <button className="pay-modal-cancel" onClick={onClose}>Закрыть</button>
       </div>
     </div>
   )
@@ -1161,7 +1165,7 @@ function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
   const [promoMsg, setPromoMsg] = useState(null)
   const [copied, setCopied] = useState(false)
 
-  const refLink = 'https://vk.com/app54628838'
+  const refLink = vkId ? `https://vk.com/app54628838#ref${vkId}` : 'https://vk.com/app54628838'
 
   const copyRef = () => {
     bridge.send('VKWebAppCopyText', { text: refLink })
