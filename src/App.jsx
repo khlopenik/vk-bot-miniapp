@@ -256,24 +256,34 @@ export default function App() {
 
 /* ── TOPBAR ── */
 function TopBar({ me, onGoProfile, onGoTariffs }) {
+  const [open, setOpen] = useState(false)
   const diamond = me?.diamond_credits ?? 0
   const std     = me?.std_credits ?? 0
   const v2      = me?.v2_credits ?? 0
   const pro     = me?.pro_credits ?? 0
   const gift    = me?.gift_credits ?? 0
   const total   = std + v2 + pro + gift
-  const label   = diamond > 0
-    ? `💎 ${diamond}`
-    : total > 0
-      ? `🖼 ${total}`
-      : '👛 0'
+  const label   = diamond > 0 ? `💎 ${diamond}` : total > 0 ? `🖼 ${total}` : '👛 0'
   return (
-    <div className="topbar">
+    <div className="topbar" style={{position:'relative'}}>
       <div className="topbar-logo">FR<span>A</span>ME</div>
-      <div className="balance-chip" onClick={onGoProfile || onGoTariffs}>
+      <div className="balance-chip" onClick={() => setOpen(o => !o)}>
         <span>{label}</span>
         <span style={{opacity:.7,fontSize:11}}>баланс</span>
       </div>
+      {open && (
+        <div style={{position:'absolute',top:52,right:12,zIndex:100,background:'#1a1a2e',border:'1px solid rgba(167,139,250,.3)',borderRadius:14,padding:'14px 18px',minWidth:200,boxShadow:'0 8px 32px rgba(0,0,0,.6)'}}
+             onClick={() => setOpen(false)}>
+          <div style={{fontSize:13,fontWeight:800,color:'#a78bfa',marginBottom:10}}>💰 Мой баланс</div>
+          {diamond > 0 && <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}><span style={{color:'#aaa'}}>💎 Алмазы</span><b>{diamond}</b></div>}
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'#aaa'}}>⭐ Стандарт</span><b>{std}</b></div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'#aaa'}}>✨ Версия 2</span><b>{v2}</b></div>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'#aaa'}}>💎 Про</span><b>{pro}</b></div>
+          {gift > 0 && <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'#aaa'}}>🎁 Подарок</span><b>{gift}</b></div>}
+          <div style={{borderTop:'1px solid rgba(255,255,255,.08)',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}}><span style={{color:'#aaa'}}>Всего фото</span><b style={{color:'#a78bfa'}}>{total}</b></div>
+          <button onClick={e=>{e.stopPropagation();setOpen(false);onGoTariffs&&onGoTariffs()}} style={{marginTop:12,width:'100%',background:'linear-gradient(135deg,#7c3aed,#2563eb)',border:'none',borderRadius:9,color:'#fff',fontWeight:700,padding:'9px 0',cursor:'pointer',fontSize:13}}>💳 Пополнить</button>
+        </div>
+      )}
     </div>
   )
 }
