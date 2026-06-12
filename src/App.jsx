@@ -869,7 +869,8 @@ function TariffsTab({ vkId, showToast }) {
     showToast('⏳ Создаём оплату... (~30 сек)')
     try {
       const r = await api.pay(vkId, key)
-      if (r.ok || r.sent_to_chat) {
+      // r.ok = новый формат, r.sent_to_chat/confirmation_url = старый
+      if (r.ok || r.sent_to_chat || r.confirmation_url) {
         showToast('✅ Открой сообщения с ботом — там кнопка оплаты 💳')
         setTimeout(() => {
           bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
