@@ -904,7 +904,7 @@ function TariffsTab({ vkId, showToast }) {
       <TopBar />
       <div className="lvl-switch-wrap">
         <button className={`lvl-btn${level==='novice'?' active':''}`} onClick={() => setLevel('novice')}>🌟 Новичок</button>
-        <button className={`lvl-btn${level==='advanced'?' active':''}`} onClick={() => setLevel('advanced')}>💎 Продвинутый</button>
+        <button className={`lvl-btn${level==='advanced'?' active':''}`} onClick={() => setLevel('advanced')}>💎 Профи</button>
       </div>
 
       <div className="promo-block">
@@ -1076,13 +1076,15 @@ function PayModal({ url, sentToChat, onClose }) {
   return (
     <div className="pay-modal-overlay" onClick={onClose}>
       <div className="pay-modal" onClick={e => e.stopPropagation()}>
-        <div className="pay-modal-title">💳 Ссылка для оплаты готова</div>
+        <div className="pay-modal-title">💳 Кнопка оплаты в сообщениях</div>
         <div className="pay-modal-desc">
           {sentToChat
-            ? '📩 Мы отправили ссылку в сообщения бота — открой чат и нажми на неё, чтобы оплатить. После оплаты алмазы зачислятся автоматически.'
-            : 'Нажми «Оплатить». После оплаты алмазы зачислятся автоматически.'}
+            ? 'Закрой приложение и открой сообщения с ботом FRAME — там кнопка «💳 Оплатить». Нажми её, чтобы оплатить. После оплаты алмазы зачислятся автоматически 💎'
+            : 'Нажми «Оплатить здесь». После оплаты алмазы зачислятся автоматически.'}
         </div>
-        <button className="pay-modal-btn" onClick={openPay}>Оплатить здесь →</button>
+        {sentToChat
+          ? <button className="pay-modal-btn" onClick={() => { bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }); onClose() }}>Открыть сообщения с ботом →</button>
+          : <button className="pay-modal-btn" onClick={openPay}>Оплатить здесь →</button>}
         <button className="pay-modal-cancel" onClick={onClose}>Закрыть</button>
       </div>
     </div>
@@ -1252,13 +1254,13 @@ function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
             Приводи людей в FRAME и получай <span style={{color:'#4ade80',fontWeight:700}}>30%</span> с каждой их оплаты — навсегда. 🤑
           </div>
           <button className="big-btn purple" style={{marginTop:12}}
-            onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=l_khlopenik' })}>
+            onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/l_khlopenik' })}>
             🚀 Стать партнёром
           </button>
         </div>
 
         {/* Support */}
-        <button className="big-btn dark" onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=l_khlopenik' })}>
+        <button className="big-btn dark" onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/l_khlopenik' })}>
           💬 Написать в поддержку
         </button>
 
