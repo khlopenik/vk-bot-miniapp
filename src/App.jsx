@@ -861,17 +861,20 @@ function TariffsTab({ vkId, showToast }) {
   const [promoStatus, setPromoStatus] = useState(null)
   const [busyKey, setBusyKey] = useState(null)
   const [builderOpen, setBuilderOpen] = useState(false)
-  const [payToken, setPayToken] = useState(null)
 
   const buy = async (key) => {
     if (!vkId) { showToast('Нет vk_id'); return }
     if (busyKey) return
     setBusyKey(key)
-    showToast('⏳ Создаём форму оплаты...')
+    showToast('⏳ Создаём ссылку...')
     try {
       const r = await api.pay(vkId, key)
-      if (r.confirmation_token) {
-        setPayToken(r.confirmation_token)
+      if (r.ok) {
+        showToast('💳 Открой сообщения с ботом — там кнопка оплаты')
+        // Открываем чат с ботом чтобы пользователь сразу увидел ссылку
+        setTimeout(() => {
+          bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
+        }, 1200)
       } else showToast('Ошибка оплаты')
     } catch (e) { showToast('Ошибка: ' + (e?.message || JSON.stringify(e) || 'попробуй позже')) }
     finally { setBusyKey(null) }
@@ -1051,14 +1054,6 @@ function TariffsTab({ vkId, showToast }) {
       )}
 
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
-
-      {payToken && (
-        <PayWidget
-          token={payToken}
-          onSuccess={() => { setPayToken(null); showToast('✅ Оплата прошла! Кредиты зачислены 💎') }}
-          onClose={() => setPayToken(null)}
-        />
-      )}
     </>
   )
 }
@@ -1195,12 +1190,61 @@ async function openSupport(vkId, kind, showToast, onPartnerDone) {
       showToast && showToast('🎉 Ты теперь партнёр! Приводи людей и зарабатывай 30% 🤑')
       onPartnerDone && onPartnerDone(r)
     } else {
-      bridge.send('VKWebAppOpenLink', { link: r.admin_link || 'https://vk.com/l_khlopenik' })
-        .catch(() => showToast && showToast('Напиши: vk.com/l_khlopenik'))
+      // Бот уже отправил гиперссылку на Любовь в чат — открываем чат с ботом
+      showToast && showToast('💬 Открой сообщения с ботом — там ссылка на поддержку')
+      setTimeout(() => {
+        bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
+      }, 1200)
     }
   } catch {
     showToast && showToast('Не получилось, попробуй ещё раз')
   }
+}
+
+/* ── Партнёрский дашборд (отдельный компонент для чистоты) ── */
+function PartnerDashboard({ me, vkId, showToast }) {
+  const [copied, setCopied] = useState(false)
+  const partnerLink = vkId ? `https://vk.com/app54628838#ref${vkId}` : 'https://vk.com/app54628838'
+  const pct = me?.partner_pct ?? 30
+  const paid = Number(me?.partner_paid ?? 0)
+  const withdrawn = 0 // нет поля — пока 0
+  const pending = Math.max(0, paid - withdrawn)
+
+  const copy = () => {
+    bridge.send('VKWebAppCopyText', { text: partnerLink })
+      .then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+      .catch(() => showToast('Скопируй ссылку вручную'))
+  }
+
+  return (
+    <div className="partner-dashboard">
+      <div className="partner-dash-title">💰 Партнёрская программа</div>
+      <div className="partner-dash-grid">
+        <div className="partner-stat purple">
+          <div className="partner-stat-num">{me?.ref_count ?? 0}</div>
+          <div className="partner-stat-label">Перешли</div>
+        </div>
+        <div className="partner-stat purple">
+          <div className="partner-stat-num">{me?.ref_paid_count ?? 0}</div>
+          <div className="partner-stat-label">Купили</div>
+        </div>
+        <div className="partner-stat green">
+          <div className="partner-stat-num">{paid.toLocaleString('ru-RU')} ₽</div>
+          <div className="partner-stat-label">Заработано</div>
+        </div>
+        <div className="partner-stat orange">
+          <div className="partner-stat-num">{pending.toLocaleString('ru-RU')} ₽</div>
+          <div className="partner-stat-label">К выплате</div>
+        </div>
+      </div>
+      <div className="partner-meta">Уже выплачено: {withdrawn} ₽ · твой процент: {pct}%</div>
+      <div className="ref-link" style={{marginTop:10}}>{partnerLink}</div>
+      <button className={`ref-copy-btn${copied?' copied':''}`} onClick={copy} style={{marginTop:8}}>
+        {copied ? '✅ Скопировано!' : '📋 Скопировать партнёрскую ссылку'}
+      </button>
+      <div className="partner-payout-note">Выплаты — по запросу в поддержку @l_khlopenik</div>
+    </div>
+  )
 }
 
 /* ────────────────────────────────── ПРОФИЛЬ ── */
@@ -1305,21 +1349,7 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, showToast }) {
 
         {/* Partner — дашборд если уже партнёр, кнопка если нет */}
         {me?.is_partner ? (
-          <div className="partner-dashboard">
-            <div className="partner-dash-title">🤝 Вы партнёр FRAME</div>
-            <div className="partner-dash-pct">{me.partner_pct ?? 30}% с каждой оплаты реферала</div>
-            <div className="partner-dash-stats">
-              <div className="partner-stat">
-                <div className="partner-stat-num">{me.ref_count ?? 0}</div>
-                <div className="partner-stat-label">Рефералов</div>
-              </div>
-              <div className="partner-stat">
-                <div className="partner-stat-num">{Number(me.partner_paid ?? 0).toLocaleString('ru-RU')} ₽</div>
-                <div className="partner-stat-label">Заработано</div>
-              </div>
-            </div>
-            <div style={{fontSize:12,color:'#888',marginTop:8,textAlign:'center'}}>Делись реферальной ссылкой выше 👆</div>
-          </div>
+          <PartnerDashboard me={me} vkId={vkId} showToast={showToast} />
         ) : (
           <div className="info-row">
             <div className="info-row-title">💰 Партнёрская программа</div>

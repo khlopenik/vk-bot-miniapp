@@ -509,16 +509,19 @@ html, body, #root {
 
 /* ── Partner dashboard ── */
 .partner-dashboard {
-  background: linear-gradient(135deg, rgba(74,222,128,.1), rgba(124,92,191,.15));
-  border: 1.5px solid rgba(74,222,128,.35);
+  background: var(--bg3); border: 1.5px solid rgba(124,92,191,.3);
   border-radius: 18px; padding: 20px; margin-bottom: 12px;
 }
-.partner-dash-title { font-size: 18px; font-weight: 800; color: #4ade80; margin-bottom: 4px; }
-.partner-dash-pct { font-size: 13px; color: #aaa; margin-bottom: 16px; }
-.partner-dash-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.partner-dash-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 14px; }
+.partner-dash-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .partner-stat {
   background: rgba(255,255,255,.06); border-radius: 12px;
   padding: 14px 12px; text-align: center;
 }
-.partner-stat-num { font-size: 22px; font-weight: 800; color: #4ade80; }
+.partner-stat.purple .partner-stat-num { color: #a78bfa; }
+.partner-stat.green  .partner-stat-num { color: #4ade80; }
+.partner-stat.orange .partner-stat-num { color: #fb923c; }
+.partner-stat-num { font-size: 22px; font-weight: 800; }
 .partner-stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+.partner-meta { font-size: 12px; color: #888; margin: 4px 0 0; }
+.partner-payout-note { font-size: 12px; color: #666; margin-top: 10px; text-align: center; }
