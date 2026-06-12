@@ -219,16 +219,16 @@ export default function App() {
 
         {!galleryStyle && <div className={`page-wrap${bannerVisible ? ' has-banner' : ''}`}>
           {activeTab === 'novichok' && (
-            <NovichokTab me={me} onRepeat={openGalleryStyle} onGoTariffs={goTariffs} onGoProfile={goProfile} />
+            <NovichokTab me={me} onRepeat={openGalleryStyle} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
           {activeTab === 'profi' && (
-            <ProfiTab vkId={vkUser?.id} me={me} preset={genPreset} onDone={() => refreshMe(vkUser?.id)} onGoTariffs={goTariffs} onGoProfile={goProfile} showToast={showToast} />
+            <ProfiTab vkId={vkUser?.id} me={me} preset={genPreset} onDone={() => refreshMe(vkUser?.id)} onGoTariffs={goTariffs} onGoProfile={goProfile} showToast={showToast} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
           {activeTab === 'tariffs' && (
-            <TariffsTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} />
+            <TariffsTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
           {activeTab === 'history' && (
-            <HistoryTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} />
+            <HistoryTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
           {activeTab === 'profile' && (
             <ProfileTab vkId={vkUser?.id} me={me} onGoTariffs={goTariffs} onGoProfile={goProfile} showToast={showToast} />
@@ -255,7 +255,7 @@ export default function App() {
 }
 
 /* ── TOPBAR ── */
-function TopBar({ me, onGoProfile, onGoTariffs }) {
+function TopBar({ me, onGoProfile, onGoTariffs, onRefresh }) {
   const [open, setOpen] = useState(false)
   const diamond = me?.diamond_credits ?? 0
   const std     = me?.std_credits ?? 0
@@ -267,7 +267,7 @@ function TopBar({ me, onGoProfile, onGoTariffs }) {
   return (
     <div className="topbar" style={{position:'relative'}}>
       <div className="topbar-logo">FR<span>A</span>ME</div>
-      <div className="balance-chip" onClick={() => setOpen(o => !o)}>
+      <div className="balance-chip" onClick={() => { setOpen(o => !o); if (!open) onRefresh?.() }}>
         <span>{label}</span>
         <span style={{opacity:.7,fontSize:11}}>баланс</span>
       </div>
@@ -462,7 +462,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
 }
 
 /* ────────────────────────────────── НОВИЧОК ── */
-function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile }) {
+function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
   const [categories, setCategories]   = useState(CATEGORIES) // fallback — static
   const [activecat, setActivecat]     = useState('all')
   const [styles, setStyles]           = useState([])
@@ -485,7 +485,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile }) {
 
   return (
     <>
-      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} />
+      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
       <div className="diamond-bar">
         <div className="diamond-chip">
           💎 <span>{me?.diamond_credits ?? '–'}</span>
@@ -566,7 +566,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile }) {
 }
 
 /* ────────────────────────────────── ПРОФИ ── */
-function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToast }) {
+function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToast, onRefresh }) {
   const [modelCat, setModelCat] = useState('photo') // photo | video | music
   const [selectedModel, setSelectedModel] = useState(null)
   const [modelSheetOpen, setModelSheetOpen] = useState(false)
@@ -642,7 +642,7 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToas
 
   return (
     <>
-      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} />
+      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
       <div className="diamond-bar">
         <div className="diamond-chip">💎 <span>{me?.diamond_credits ?? '–'}</span></div>
         <button className="diamond-topup" onClick={onGoTariffs}>Пополнить ▸</button>
@@ -875,7 +875,7 @@ function BuilderSheet({ open, onClose, onBuy }) {
 }
 
 /* ────────────────────────────────── ТАРИФЫ ── */
-function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile }) {
+function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }) {
   const [level, setLevel] = useState('novice') // novice | advanced
   const [qTab, setQTab] = useState('std')
   const [couplesQ, setCouplesQ] = useState('std')
@@ -931,7 +931,7 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile }) {
 
   return (
     <>
-      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} />
+      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
       <div className="lvl-switch-wrap">
         <button className={`lvl-btn${level==='novice'?' active':''}`} onClick={() => setLevel('novice')}>🌟 Новичок</button>
         <button className={`lvl-btn${level==='advanced'?' active':''}`} onClick={() => setLevel('advanced')}>💎 Профи</button>
@@ -1169,7 +1169,7 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 }
 
 /* ────────────────────────────────── ИСТОРИЯ ── */
-function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile }) {
+function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }) {
   const [items, setItems] = useState(null)
 
   const load = useCallback(() => {
@@ -1186,7 +1186,7 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile }) {
 
   return (
     <>
-      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} />
+      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 0'}}>
         <div>
           <div className="sec-title" style={{paddingBottom:2}}>История</div>
