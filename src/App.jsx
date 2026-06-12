@@ -1161,17 +1161,21 @@ function HistoryTab({ vkId, showToast }) {
   )
 }
 
-/* Поддержка/партнёрство = чат с ботом. Бот пишет пользователю в личку
-   (приходит уведомление) и уведомляет админа. Никаких vk.com-ссылок. */
+/* Поддержка → сразу открываем личку админа (чат с тобой), человек пишет напрямую.
+   Партнёр → человек становится партнёром, админу приходит уведомление. */
 async function openSupport(vkId, kind, showToast) {
   if (!vkId) { showToast && showToast('Нет vk_id'); return }
   try {
-    await api.support(vkId, kind)
-    showToast && showToast('✅ Открой сообщения с ботом FRAME — мы тебе написали 💬')
-    // мягко предлагаем перейти в чат с ботом
-    bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
+    const r = await api.support(vkId, kind)
+    if (kind === 'partner') {
+      showToast && showToast('🎉 Ты теперь партнёр! Делись своей ссылкой ниже 👇')
+    } else {
+      // поддержка — перебрасываем в личные сообщения с тобой
+      bridge.send('VKWebAppOpenLink', { link: r.admin_link || 'https://vk.com/l_khlopenik' })
+        .catch(() => showToast && showToast('Напиши нам: vk.com/l_khlopenik'))
+    }
   } catch {
-    showToast && showToast('Не получилось. Напиши нам: vk.com/l_khlopenik')
+    showToast && showToast('Не получилось, попробуй ещё раз')
   }
 }
 
