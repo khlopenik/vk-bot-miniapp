@@ -231,7 +231,7 @@ export default function App() {
             <HistoryTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
           {activeTab === 'profile' && (
-            <ProfileTab vkId={vkUser?.id} me={me} onGoTariffs={goTariffs} onGoProfile={goProfile} showToast={showToast} />
+            <ProfileTab vkId={vkUser?.id} me={me} onGoTariffs={goTariffs} onGoProfile={goProfile} showToast={showToast} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
         </div>}
 
@@ -1284,7 +1284,7 @@ function PartnerDashboard({ me, vkId, showToast }) {
 }
 
 /* ────────────────────────────────── ПРОФИЛЬ ── */
-function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast }) {
+function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onRefresh }) {
   const [promo, setPromo] = useState('')
   const [promoMsg, setPromoMsg] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -1318,10 +1318,7 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast }) {
 
   return (
     <>
-      <div className="topbar">
-        <div className="topbar-logo">FR<span>A</span>ME</div>
-        <div className="balance-chip" onClick={onGoTariffs}><span>👛</span><span>Баланс</span></div>
-      </div>
+      <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
 
       <div className="profile-wrap">
         <div className="sec-title" style={{padding:'0 0 16px'}}>Мой профиль</div>
