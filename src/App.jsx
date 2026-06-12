@@ -1161,14 +1161,18 @@ function HistoryTab({ vkId, showToast }) {
   )
 }
 
-/* Открыть страницу поддержки. VKWebAppOpenLink с vk.com-ссылками капризен,
-   поэтому ловим ошибку и даём пользователю явную обратную связь. */
-function openSupport(showToast) {
-  bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/l_khlopenik' })
-    .catch(() => {
-      try { window.open('https://vk.com/l_khlopenik', '_blank') } catch {}
-      showToast && showToast('Напиши нам: vk.com/l_khlopenik')
-    })
+/* Поддержка/партнёрство = чат с ботом. Бот пишет пользователю в личку
+   (приходит уведомление) и уведомляет админа. Никаких vk.com-ссылок. */
+async function openSupport(vkId, kind, showToast) {
+  if (!vkId) { showToast && showToast('Нет vk_id'); return }
+  try {
+    await api.support(vkId, kind)
+    showToast && showToast('✅ Открой сообщения с ботом FRAME — мы тебе написали 💬')
+    // мягко предлагаем перейти в чат с ботом
+    bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
+  } catch {
+    showToast && showToast('Не получилось. Напиши нам: vk.com/l_khlopenik')
+  }
 }
 
 /* ────────────────────────────────── ПРОФИЛЬ ── */
@@ -1264,13 +1268,13 @@ function ProfileTab({ vkId, me, onGoTariffs, showToast }) {
             Приводи людей в FRAME и получай <span style={{color:'#4ade80',fontWeight:700}}>30%</span> с каждой их оплаты — навсегда. 🤑
           </div>
           <button className="big-btn purple" style={{marginTop:12}}
-            onClick={() => openSupport(showToast)}>
+            onClick={() => openSupport(vkId, 'partner', showToast)}>
             🚀 Стать партнёром
           </button>
         </div>
 
         {/* Support */}
-        <button className="big-btn dark" onClick={() => openSupport(showToast)}>
+        <button className="big-btn dark" onClick={() => openSupport(vkId, 'support', showToast)}>
           💬 Написать в поддержку
         </button>
 

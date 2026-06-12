@@ -19,6 +19,7 @@ export const api = {
   models: () => req('/models'),
   history: (vk_id) => req(`/history?vk_id=${vk_id}`),
   pay: (vk_id, tariff) => req('/pay', { method: 'POST', body: JSON.stringify({ vk_id, tariff }) }),
+  support: (vk_id, kind) => req('/support', { method: 'POST', body: JSON.stringify({ vk_id, kind }) }),
   generate: (vk_id, photo_url, model_key, prompt) =>
     req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt }) }),
   categories: () => req('/categories'),
