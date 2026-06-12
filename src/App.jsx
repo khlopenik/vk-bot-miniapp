@@ -154,7 +154,7 @@ function useToast() {
   const [msg, setMsg] = useState(null)
   const show = useCallback((m) => {
     setMsg(m)
-    setTimeout(() => setMsg(null), 2200)
+    setTimeout(() => setMsg(null), 4500)
   }, [])
   return [msg, show]
 }
