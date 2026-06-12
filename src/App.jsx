@@ -224,10 +224,10 @@ export default function App() {
             <ProfiTab vkId={vkUser?.id} me={me} preset={genPreset} onDone={() => refreshMe(vkUser?.id)} onGoTariffs={goTariffs} showToast={showToast} />
           )}
           {activeTab === 'tariffs' && (
-            <TariffsTab vkId={vkUser?.id} showToast={showToast} />
+            <TariffsTab vkId={vkUser?.id} showToast={showToast} onGoTariffs={goTariffs} />
           )}
           {activeTab === 'history' && (
-            <HistoryTab vkId={vkUser?.id} showToast={showToast} />
+            <HistoryTab vkId={vkUser?.id} showToast={showToast} onGoTariffs={goTariffs} />
           )}
           {activeTab === 'profile' && (
             <ProfileTab vkId={vkUser?.id} me={me} onGoTariffs={goTariffs} showToast={showToast} />
@@ -853,7 +853,7 @@ function BuilderSheet({ open, onClose, onBuy }) {
 }
 
 /* ────────────────────────────────── ТАРИФЫ ── */
-function TariffsTab({ vkId, showToast }) {
+function TariffsTab({ vkId, showToast, onGoTariffs }) {
   const [level, setLevel] = useState('novice') // novice | advanced
   const [qTab, setQTab] = useState('std')
   const [couplesQ, setCouplesQ] = useState('std')
@@ -909,7 +909,7 @@ function TariffsTab({ vkId, showToast }) {
 
   return (
     <>
-      <TopBar />
+      <TopBar onGoTariffs={onGoTariffs} />
       <div className="lvl-switch-wrap">
         <button className={`lvl-btn${level==='novice'?' active':''}`} onClick={() => setLevel('novice')}>🌟 Новичок</button>
         <button className={`lvl-btn${level==='advanced'?' active':''}`} onClick={() => setLevel('advanced')}>💎 Профи</button>
@@ -1147,7 +1147,7 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 }
 
 /* ────────────────────────────────── ИСТОРИЯ ── */
-function HistoryTab({ vkId, showToast }) {
+function HistoryTab({ vkId, showToast, onGoTariffs }) {
   const [items, setItems] = useState(null)
 
   const load = useCallback(() => {
@@ -1164,7 +1164,8 @@ function HistoryTab({ vkId, showToast }) {
 
   return (
     <>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0'}}>
+      <TopBar onGoTariffs={onGoTariffs} />
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 0'}}>
         <div>
           <div className="sec-title" style={{paddingBottom:2}}>История</div>
           <div className="sec-sub">Все твои генерации</div>
@@ -1316,10 +1317,11 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, showToast }) {
 
         {/* Promo */}
         <div className="bal-card" style={{marginTop:0}}>
-          <div className="info-row-title" style={{fontSize:14,fontWeight:700,color:'#f97316',marginBottom:10}}>🎫 Промокод</div>
-          <div className="promo-block" style={{padding:0}}>
+          <div style={{fontSize:13,fontWeight:700,color:'#f97316',marginBottom:10}}>🎫 Промокод</div>
+          <div style={{display:'flex',gap:8,alignItems:'center'}}>
             <input
               className="promo-input-field"
+              style={{flex:1,margin:0}}
               placeholder="ВВЕДИ ПРОМОКОД"
               value={promo}
               onChange={e => setPromo(e.target.value.toUpperCase())}
