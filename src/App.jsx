@@ -176,16 +176,25 @@ export default function App() {
 
   useEffect(() => {
     try { bridge.send('VKWebAppInit') } catch {}
-    // Читаем hash из URL для навигации из кнопок бота
+    // Читаем hash из URL для навигации
     const hash = window.location.hash.replace('#', '')
     if (['novichok','profi','tariffs','history','profile'].includes(hash)) {
       setActiveTab(hash)
     }
+    // Deep link на конкретный стиль: #style_123
+    const styleMatch = hash.match(/^style_(\d+)$/)
+
     const timeout = (ms) => new Promise((_, r) => setTimeout(() => r(new Error('to')), ms))
     Promise.race([bridge.send('VKWebAppGetUserInfo'), timeout(5000)])
       .then((u) => { setVkUser(u); return api.me(u.id) })
       .then(setMe)
       .catch(() => {})
+
+    if (styleMatch) {
+      api.styleOne(styleMatch[1])
+        .then(r => { if (r?.style) setGalleryStyle(r.style) })
+        .catch(() => {})
+    }
   }, [])
 
   const goProfi = (preset) => { setGenPreset(preset || null); setActiveTab('profi') }
