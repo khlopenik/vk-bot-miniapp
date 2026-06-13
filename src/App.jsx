@@ -176,25 +176,30 @@ export default function App() {
 
   useEffect(() => {
     try { bridge.send('VKWebAppInit') } catch {}
-    // Читаем hash из URL для навигации
-    const hash = window.location.hash.replace('#', '')
-    if (['novichok','profi','tariffs','history','profile'].includes(hash)) {
-      setActiveTab(hash)
+
+    function handleHash(hash) {
+      if (!hash) return
+      if (['novichok','profi','tariffs','history','profile'].includes(hash)) {
+        setActiveTab(hash)
+      }
+      const styleMatch = hash.match(/^style_(\d+)$/)
+      if (styleMatch) {
+        api.styleOne(styleMatch[1])
+          .then(r => { if (r?.style) setGalleryStyle(r.style) })
+          .catch(() => {})
+      }
     }
-    // Deep link на конкретный стиль: #style_123
-    const styleMatch = hash.match(/^style_(\d+)$/)
+
+    // VK iframe не передаёт window.location.hash — читаем через VKWebAppGetLaunchParams
+    bridge.send('VKWebAppGetLaunchParams')
+      .then(p => { handleHash(p?.hash || '') })
+      .catch(() => { handleHash(window.location.hash.replace('#', '')) })
 
     const timeout = (ms) => new Promise((_, r) => setTimeout(() => r(new Error('to')), ms))
     Promise.race([bridge.send('VKWebAppGetUserInfo'), timeout(5000)])
       .then((u) => { setVkUser(u); return api.me(u.id) })
       .then(setMe)
       .catch(() => {})
-
-    if (styleMatch) {
-      api.styleOne(styleMatch[1])
-        .then(r => { if (r?.style) setGalleryStyle(r.style) })
-        .catch(() => {})
-    }
   }, [])
 
   const goProfi = (preset) => { setGenPreset(preset || null); setActiveTab('profi') }
