@@ -1211,7 +1211,11 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 function HistoryViewer({ url, onClose, showToast }) {
   const save = () => {
     bridge.send('VKWebAppDownloadFile', { url, filename: 'frame_photo.jpg' })
-      .catch(() => { showToast && showToast('Откройте фото и сохраните вручную') })
+      .catch(() => {
+        // Открываем нативный просмотрщик VK — там долгое нажатие → сохранить
+        bridge.send('VKWebAppShowImages', { images: [url], start_index: 0 })
+          .catch(() => { window.open(url, '_blank') })
+      })
   }
   return (
     <div className="hist-viewer-overlay" onClick={onClose}>
