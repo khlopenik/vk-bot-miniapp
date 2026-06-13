@@ -1219,12 +1219,21 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 /* ────────────────────────────────── ИСТОРИЯ ── */
 function HistoryViewer({ url, onClose, showToast }) {
   const save = () => {
-    // Добавляем ?download=1 — сервер вернёт Content-Disposition: attachment
-    const dlUrl = url.includes('?') ? url + '&download=1' : url + '?download=1'
+    // Извлекаем src из прокси-URL и делаем чистый /api/photo.jpg?src=...
+    const API = 'https://vk-bot-2vns.onrender.com'
+    let dlUrl
+    try {
+      const u = new URL(url)
+      const src = u.searchParams.get('src') || url
+      dlUrl = `${API}/api/photo.jpg?src=${encodeURIComponent(src)}`
+    } catch {
+      dlUrl = `${API}/api/photo.jpg?src=${encodeURIComponent(url)}`
+    }
     bridge.send('VKWebAppDownloadFile', { url: dlUrl, filename: 'frame_photo.jpg' })
       .catch(() => {
-        bridge.send('VKWebAppShowImages', { images: [url], start_index: 0 })
-          .catch(() => { window.open(url, '_blank') })
+        // Открываем прямую ссылку в браузере — там пользователь сохранит
+        bridge.send('VKWebAppOpenLink', { url: dlUrl })
+          .catch(() => { window.open(dlUrl, '_blank') })
       })
   }
   return (
