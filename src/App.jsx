@@ -1208,8 +1208,25 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 }
 
 /* ────────────────────────────────── ИСТОРИЯ ── */
+function HistoryViewer({ url, onClose, showToast }) {
+  const save = () => {
+    bridge.send('VKWebAppDownloadFile', { url, filename: 'frame_photo.jpg' })
+      .catch(() => { showToast && showToast('Откройте фото и сохраните вручную') })
+  }
+  return (
+    <div className="hist-viewer-overlay" onClick={onClose}>
+      <div className="hist-viewer-inner" onClick={e => e.stopPropagation()}>
+        <button className="hist-viewer-close" onClick={onClose}>✕</button>
+        <img className="hist-viewer-img" src={url} alt="" />
+        <button className="hist-viewer-save" onClick={save}>💾 Сохранить фото</button>
+      </div>
+    </div>
+  )
+}
+
 function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }) {
   const [items, setItems] = useState(null)
+  const [viewer, setViewer] = useState(null)
 
   const load = useCallback(() => {
     if (!vkId) return
@@ -1219,18 +1236,13 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
 
   useEffect(() => { load() }, [load])
 
-  const downloadItem = (url) => {
-    bridge.send('VKWebAppDownloadFile', { url, filename: 'frame_photo.jpg' })
-      .catch(() => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click() })
-  }
-
   return (
     <>
       <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px 0'}}>
         <div>
           <div className="sec-title" style={{paddingBottom:2}}>История</div>
-          <div className="sec-sub">Все твои генерации</div>
+          <div className="sec-sub">Нажми на фото, чтобы открыть</div>
         </div>
         <button className="refresh-btn" onClick={load}>🔄 Обновить</button>
       </div>
@@ -1240,13 +1252,13 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
           ? <div className="state">Пока пусто — начни генерацию!</div>
           : <div className="hist-grid">
               {items.map((it, i) => (
-                <div key={i} className="hist-cell">
+                <div key={i} className="hist-cell" onClick={() => setViewer(it.result_url)}>
                   <img src={it.result_url} alt="" />
-                  <button className="hist-dl-btn" onClick={() => downloadItem(it.result_url)}>💾</button>
                 </div>
               ))}
             </div>
       }
+      {viewer && <HistoryViewer url={viewer} onClose={() => setViewer(null)} showToast={showToast} />}
     </>
   )
 }
