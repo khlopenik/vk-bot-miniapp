@@ -190,10 +190,15 @@ export default function App() {
       }
     }
 
-    // VK iframe не передаёт window.location.hash — читаем через VKWebAppGetLaunchParams
+    // VK передаёт hash разными способами — проверяем все
+    const searchHash = new URLSearchParams(window.location.search).get('hash') || ''
+    const locationHash = window.location.hash.replace('#', '')
+    if (searchHash || locationHash) {
+      handleHash(searchHash || locationHash)
+    }
     bridge.send('VKWebAppGetLaunchParams')
-      .then(p => { handleHash(p?.hash || '') })
-      .catch(() => { handleHash(window.location.hash.replace('#', '')) })
+      .then(p => { if (p?.hash) handleHash(p.hash) })
+      .catch(() => {})
 
     const timeout = (ms) => new Promise((_, r) => setTimeout(() => r(new Error('to')), ms))
     Promise.race([bridge.send('VKWebAppGetUserInfo'), timeout(5000)])
