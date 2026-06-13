@@ -203,7 +203,7 @@ export default function App() {
             vkId={vkUser?.id}
             me={me}
             onBack={() => setGalleryStyle(null)}
-            onDone={() => { refreshMe(vkUser?.id); setGalleryStyle(null) }}
+            onDone={() => { refreshMe(vkUser?.id) }}
             onGoTariffs={() => { setGalleryStyle(null); goTariffs() }}
             showToast={showToast}
           />
@@ -357,15 +357,28 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
     } finally { setBusy(false); stopTimer() }
   }
 
+  const downloadPhoto = (url) => {
+    bridge.send('VKWebAppDownloadFile', { url, filename: 'frame_photo.jpg' })
+      .catch(() => {
+        // fallback: открываем в новой вкладке
+        const a = document.createElement('a')
+        a.href = url; a.target = '_blank'; a.click()
+      })
+  }
+
   /* Экран результата */
   if (resultUrl) return (
     <div className="gal-gen-wrap">
       <button className="gal-back-btn" onClick={onBack}>← Назад</button>
       <div className="sec-title" style={{marginTop:16}}>Готово! 🎉</div>
-      <img src={resultUrl} alt="Результат" className="gen-result-img" />
-      <div className="gen-result-btns">
-        <button className="gen-result-btn" onClick={() => { setResultUrl(null); setPhotoUrl('') }}>🔄 Ещё раз</button>
-        <button className="gen-result-btn primary" onClick={() => bridge.send('VKWebAppShare', { link: resultUrl })}>📤 Поделиться</button>
+      <img src={resultUrl} alt="Результат" className="gen-result-img" style={{borderRadius:14,width:'100%',maxWidth:400,display:'block',margin:'12px auto'}} />
+      <div className="gen-result-btns" style={{display:'flex',flexDirection:'column',gap:10,marginTop:16}}>
+        <button className="gen-result-btn primary" style={{background:'linear-gradient(135deg,#7c3aed,#2563eb)',color:'#fff',fontWeight:700,padding:'14px',borderRadius:12,border:'none',fontSize:15,cursor:'pointer'}}
+          onClick={() => downloadPhoto(resultUrl)}>💾 Скачать фото</button>
+        <button className="gen-result-btn" style={{background:'rgba(255,255,255,.07)',color:'#a78bfa',fontWeight:600,padding:'12px',borderRadius:12,border:'1px solid rgba(167,139,250,.3)',fontSize:14,cursor:'pointer'}}
+          onClick={() => { setResultUrl(null); setPhotoUrl(''); setPhotoFile(null) }}>🔄 Сделать ещё</button>
+        <button className="gen-result-btn" style={{background:'rgba(255,255,255,.04)',color:'#888',padding:'10px',borderRadius:12,border:'1px solid rgba(255,255,255,.08)',fontSize:13,cursor:'pointer'}}
+          onClick={onBack}>← Вернуться к стилям</button>
       </div>
     </div>
   )
@@ -1206,8 +1219,9 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
 
   useEffect(() => { load() }, [load])
 
-  const openItem = (url) => {
-    bridge.send('VKWebAppOpenLink', { link: url }).catch(() => {})
+  const downloadItem = (url) => {
+    bridge.send('VKWebAppDownloadFile', { url, filename: 'frame_photo.jpg' })
+      .catch(() => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.click() })
   }
 
   return (
@@ -1226,8 +1240,9 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
           ? <div className="state">Пока пусто — начни генерацию!</div>
           : <div className="hist-grid">
               {items.map((it, i) => (
-                <div key={i} className="hist-cell" onClick={() => openItem(it.result_url)}>
+                <div key={i} className="hist-cell">
                   <img src={it.result_url} alt="" />
+                  <button className="hist-dl-btn" onClick={() => downloadItem(it.result_url)}>💾</button>
                 </div>
               ))}
             </div>
