@@ -1219,9 +1219,10 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 /* ────────────────────────────────── ИСТОРИЯ ── */
 function HistoryViewer({ url, onClose, showToast }) {
   const save = () => {
-    bridge.send('VKWebAppDownloadFile', { url, filename: 'frame_photo.jpg' })
+    // Добавляем ?download=1 — сервер вернёт Content-Disposition: attachment
+    const dlUrl = url.includes('?') ? url + '&download=1' : url + '?download=1'
+    bridge.send('VKWebAppDownloadFile', { url: dlUrl, filename: 'frame_photo.jpg' })
       .catch(() => {
-        // Открываем нативный просмотрщик VK — там долгое нажатие → сохранить
         bridge.send('VKWebAppShowImages', { images: [url], start_index: 0 })
           .catch(() => { window.open(url, '_blank') })
       })
