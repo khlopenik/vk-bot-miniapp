@@ -300,6 +300,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
   const [quality, setQuality]   = useState(qualities[0] || 'std')
   const [photoUrl, setPhotoUrl]     = useState('')
   const [photoFile, setPhotoFile]   = useState(null) // blob file для upload
+  const [size, setSize]             = useState('vert')
   const [inputVal, setInputVal]     = useState('')
   const [busy, setBusy]             = useState(false)
   const [error, setError]           = useState(null)
@@ -344,7 +345,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
         const up = await api.uploadPhoto(photoFile)
         finalUrl = up.url
       }
-      const r = await api.generate(vkId, finalUrl, modelKey, promptFull)
+      const r = await api.generate(vkId, finalUrl, modelKey, promptFull, size)
       setResultUrl(r.result_url)
       onDone?.()
     } catch (e) {
@@ -447,6 +448,23 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
           Нет кредитов {QUALITY_LABEL[quality]} — <span style={{color:'#a78bfa',cursor:'pointer'}} onClick={onGoTariffs}>пополнить →</span>
         </div>
       )}
+
+      {/* Выбор размера */}
+      <div className="pro-field-label" style={{marginTop:20}}>Формат</div>
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:4}}>
+        {[
+          {v:'sq',   icon:'⬛', label:'1:1'},
+          {v:'34',   icon:'🖼', label:'3:4'},
+          {v:'vert', icon:'📱', label:'9:16'},
+          {v:'43',   icon:'🏞', label:'4:3'},
+          {v:'horiz',icon:'📺', label:'16:9'},
+        ].map(s => (
+          <button key={s.v}
+            onClick={() => setSize(s.v)}
+            style={{display:'flex',alignItems:'center',gap:5,padding:'8px 12px',borderRadius:10,border:`1px solid ${size===s.v?'#a78bfa':'rgba(255,255,255,.1)'}`,background:size===s.v?'rgba(124,92,191,.25)':'rgba(255,255,255,.04)',color:size===s.v?'#a78bfa':'#aaa',cursor:'pointer',fontSize:13,fontWeight:size===s.v?700:400}}
+          >{s.icon} {s.label}</button>
+        ))}
+      </div>
 
       {error && <div className="error-msg" style={{marginTop:12}}>{error}</div>}
 

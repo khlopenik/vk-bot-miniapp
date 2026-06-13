@@ -35,8 +35,8 @@ export const api = {
   // pay: Render cold start ~30 сек → timeout 60 сек
   pay: (vk_id, tariff) => req('/pay', { method: 'POST', body: JSON.stringify({ vk_id, tariff }) }, 60000),
   support: (vk_id, kind) => req('/support', { method: 'POST', body: JSON.stringify({ vk_id, kind }) }),
-  generate: (vk_id, photo_url, model_key, prompt) =>
-    req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt }) }, 120000),
+  generate: (vk_id, photo_url, model_key, prompt, size = 'vert') =>
+    req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt, size }) }, 120000),
   categories: () => req('/categories'),
   styles: (category_key) => req(`/styles/${category_key}`),
   styleOne: (style_id) => req(`/style-one/${style_id}`),
