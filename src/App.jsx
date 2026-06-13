@@ -315,6 +315,10 @@ const QUALITY_DIA    = { std: 79, v2: 99, pro: 149 }
 
 /* ────────────────────────────── ГАЛЕРЕЙНАЯ ГЕНЕРАЦИЯ ── */
 function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToast }) {
+  // Семейный multi-стиль: грузим ПО ОДНОМУ фото на каждого человека → gpt4o собирает портрет
+  const isMulti     = style.upload_mode === 'multi'
+  const peopleCount = Math.min(6, Math.max(1, style.photo_count || 2))
+  const [multiPhotos, setMultiPhotos] = useState([]) // [{ file, preview }]
   const qualities = (style.quality_modes || 'std,v2,pro').split(',').map(q => q.trim()).filter(q => QUALITY_MODEL[q])
   const [quality, setQuality]   = useState(qualities[0] || 'std')
   const [photoUrl, setPhotoUrl]     = useState('')
@@ -351,12 +355,52 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
     setPhotoUrl(URL.createObjectURL(file)) // только для превью
   }
 
+  // ── Multi: выбор фото на конкретный слот (человека) ──
+  const multiInputRef = useRef(null)
+  const multiSlotRef  = useRef(0)
+  const pickMultiPhoto = (idx) => { multiSlotRef.current = idx; multiInputRef.current?.click() }
+  const onMultiFileChange = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const idx = multiSlotRef.current
+    setMultiPhotos(prev => {
+      const next = [...prev]
+      next[idx] = { file, preview: URL.createObjectURL(file) }
+      return next
+    })
+    setError(null)
+  }
+  const removeMultiPhoto = (idx) => setMultiPhotos(prev => prev.filter((_, i) => i !== idx))
+  const multiFilled = multiPhotos.filter(Boolean)
+
   const generate = async () => {
     if (!vkId) { setError('Войди в VK чтобы продолжить'); return }
+    const promptFull = [style.prompt || '', inputVal].filter(Boolean).join(', ')
+
+    // ── Семейный multi-режим: грузим все фото → gpt4o собирает портрет ──
+    if (isMulti) {
+      if (multiFilled.length < 1) { setError('Загрузи хотя бы одно фото'); return }
+      setBusy(true); setError(null); setResultUrl(null); startTimer()
+      try {
+        const urls = []
+        for (const p of multiFilled) {
+          const up = await api.uploadPhoto(p.file)
+          urls.push(up.url)
+        }
+        const r = await api.generateMulti(vkId, urls, promptFull)
+        setResultUrl(r.result_url)
+        onDone?.()
+      } catch (e) {
+        if (e.code === 'no_credits') setError('Недостаточно кредитов на семейный портрет')
+        else setError('Ошибка генерации. Попробуй снова.')
+      } finally { setBusy(false); stopTimer() }
+      return
+    }
+
     if (!photoUrl) { setError('Загрузи своё фото'); return }
     setBusy(true); setError(null); setResultUrl(null); startTimer()
     const modelKey = QUALITY_MODEL[quality]
-    const promptFull = [style.prompt || '', inputVal].filter(Boolean).join(', ')
     try {
       // Если фото выбрано через file input — сначала загружаем на сервер
       let finalUrl = photoUrl
@@ -395,7 +439,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
         <button className="gen-result-btn primary" style={{background:'linear-gradient(135deg,#7c3aed,#2563eb)',color:'#fff',fontWeight:700,padding:'14px',borderRadius:12,border:'none',fontSize:15,cursor:'pointer'}}
           onClick={() => downloadPhoto(resultUrl)}>💾 Скачать фото</button>
         <button className="gen-result-btn" style={{background:'rgba(255,255,255,.07)',color:'#a78bfa',fontWeight:600,padding:'12px',borderRadius:12,border:'1px solid rgba(167,139,250,.3)',fontSize:14,cursor:'pointer'}}
-          onClick={() => { setResultUrl(null); setPhotoUrl(''); setPhotoFile(null) }}>🔄 Сделать ещё</button>
+          onClick={() => { setResultUrl(null); setPhotoUrl(''); setPhotoFile(null); setMultiPhotos([]) }}>🔄 Сделать ещё</button>
         <button className="gen-result-btn" style={{background:'rgba(255,255,255,.04)',color:'#888',padding:'10px',borderRadius:12,border:'1px solid rgba(255,255,255,.08)',fontSize:13,cursor:'pointer'}}
           onClick={onBack}>← Вернуться к стилям</button>
       </div>
@@ -422,23 +466,53 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
       )}
 
       {/* Загрузка фото */}
-      <div className="pro-field-label" style={{marginTop:16}}>Твоё фото</div>
-      <div style={{fontSize:12,color:'#888',marginBottom:8}}>{style.photo_hint || 'Лицо должно быть хорошо видно'}</div>
-      {photoUrl
-        ? <label className="pro-upload-zone has-photo" onClick={pickPhoto}>
-            <img src={photoUrl} className="pro-upload-preview" alt="" />
-          </label>
-        : <label className="pro-upload-zone" onClick={pickPhoto}>
-            <div className="pro-upload-ph">
-              <div style={{fontSize:36,marginBottom:8}}>📷</div>
-              <div style={{fontSize:14,fontWeight:700,color:'#a78bfa'}}>Нажми чтобы выбрать фото</div>
-              <div style={{fontSize:12,color:'#888',marginTop:6}}>Лицо чётко видно · без очков</div>
-            </div>
-          </label>
-      }
-      <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFileChange} />
-      {photoUrl && (
-        <button className="pro-other-btn" style={{marginTop:8,marginBottom:4}} onClick={() => setPhotoUrl('')}>Сменить фото</button>
+      {isMulti ? (
+        <>
+          <div className="pro-field-label" style={{marginTop:16}}>Фото каждого человека</div>
+          <div style={{fontSize:12,color:'#888',marginBottom:10}}>
+            {style.photo_hint || `Загрузи по одному отдельному фото на каждого (до ${peopleCount}). Нейросеть соберёт всех в один портрет.`}
+          </div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:4}}>
+            {Array.from({length: peopleCount}).map((_, idx) => {
+              const p = multiPhotos[idx]
+              return p ? (
+                <div key={idx} style={{position:'relative',aspectRatio:'1',borderRadius:12,overflow:'hidden',border:'1px solid rgba(167,139,250,.4)'}}>
+                  <img src={p.preview} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} />
+                  <button onClick={() => removeMultiPhoto(idx)}
+                    style={{position:'absolute',top:4,right:4,width:24,height:24,borderRadius:'50%',border:'none',background:'rgba(0,0,0,.6)',color:'#fff',fontSize:14,cursor:'pointer',lineHeight:1}}>✕</button>
+                </div>
+              ) : (
+                <button key={idx} onClick={() => pickMultiPhoto(idx)}
+                  style={{aspectRatio:'1',borderRadius:12,border:'1px dashed rgba(167,139,250,.4)',background:'rgba(255,255,255,.04)',color:'#a78bfa',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4}}>
+                  <span style={{fontSize:26}}>＋</span>
+                  <span style={{fontSize:11}}>Человек {idx+1}</span>
+                </button>
+              )
+            })}
+          </div>
+          <input ref={multiInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={onMultiFileChange} />
+        </>
+      ) : (
+        <>
+          <div className="pro-field-label" style={{marginTop:16}}>Твоё фото</div>
+          <div style={{fontSize:12,color:'#888',marginBottom:8}}>{style.photo_hint || 'Лицо должно быть хорошо видно'}</div>
+          {photoUrl
+            ? <label className="pro-upload-zone has-photo" onClick={pickPhoto}>
+                <img src={photoUrl} className="pro-upload-preview" alt="" />
+              </label>
+            : <label className="pro-upload-zone" onClick={pickPhoto}>
+                <div className="pro-upload-ph">
+                  <div style={{fontSize:36,marginBottom:8}}>📷</div>
+                  <div style={{fontSize:14,fontWeight:700,color:'#a78bfa'}}>Нажми чтобы выбрать фото</div>
+                  <div style={{fontSize:12,color:'#888',marginTop:6}}>Лицо чётко видно · без очков</div>
+                </div>
+              </label>
+          }
+          <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={onFileChange} />
+          {photoUrl && (
+            <button className="pro-other-btn" style={{marginTop:8,marginBottom:4}} onClick={() => setPhotoUrl('')}>Сменить фото</button>
+          )}
+        </>
       )}
 
       {/* Дополнительный ввод (input_label) */}
@@ -455,7 +529,8 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
         </>
       )}
 
-      {/* Выбор качества */}
+      {/* Выбор качества — скрыт для семейных multi (всегда gpt4o, биллинг family) */}
+      {!isMulti && (<>
       <div className="pro-field-label" style={{marginTop:20}}>Качество</div>
       <div className="gal-quality-row">
         {qualities.map(q => {
@@ -497,6 +572,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
           >{s.icon} {s.label}</button>
         ))}
       </div>
+      </>)}
 
       {error && <div className="error-msg" style={{marginTop:12}}>{error}</div>}
 
@@ -509,9 +585,15 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
           <div className="gen-status-txt">Обрабатываем твоё фото…</div>
         </div>
       ) : (
-        <button className="pro-create-btn" style={{marginTop:20}} onClick={generate} disabled={!photoUrl}>
-          ✨ Создать в {QUALITY_LABEL[quality]}
-        </button>
+        isMulti ? (
+          <button className="pro-create-btn" style={{marginTop:20}} onClick={generate} disabled={multiFilled.length < 1}>
+            ✨ Создать семейный портрет{multiFilled.length ? ` (${multiFilled.length})` : ''}
+          </button>
+        ) : (
+          <button className="pro-create-btn" style={{marginTop:20}} onClick={generate} disabled={!photoUrl}>
+            ✨ Создать в {QUALITY_LABEL[quality]}
+          </button>
+        )
       )}
       <div style={{height:32}} />
     </div>
