@@ -520,7 +520,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
     api.categories().then((cats) => {
       if (cats && cats.length > 0) {
         // emoji может дублироваться в name — убираем из label
-        const mapped = cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name.replace(/^\S+\s/, '') }))
+        const mapped = cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name }))
         setCategories(mapped)
         setActivecat(mapped[0].key)
       }
