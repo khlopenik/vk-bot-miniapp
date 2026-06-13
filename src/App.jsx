@@ -464,14 +464,18 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
 /* ────────────────────────────────── НОВИЧОК ── */
 function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
   const [categories, setCategories]   = useState(CATEGORIES) // fallback — static
-  const [activecat, setActivecat]     = useState('all')
+  const [activecat, setActivecat]     = useState(CATEGORIES[0]?.key || '')
   const [styles, setStyles]           = useState([])
   const [loadingStyles, setLoadingStyles] = useState(false)
 
   // Загружаем категории из Supabase при монтировании
   useEffect(() => {
     api.categories().then((cats) => {
-      if (cats && cats.length > 0) setCategories(cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name })))
+      if (cats && cats.length > 0) {
+        const mapped = cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name }))
+        setCategories(mapped)
+        setActivecat(mapped[0].key) // первая категория активна по умолчанию, как в TG
+      }
     }).catch(() => {})
   }, [])
 
@@ -495,13 +499,6 @@ function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
 
       {/* Категории */}
       <div className="cat-grid" id="cats">
-        <div
-          className={`cat-btn${activecat === 'all' ? ' active' : ''}`}
-          onClick={() => setActivecat('all')}
-        >
-          <span className="cat-icon">🌟</span>
-          <span className="cat-name">Все</span>
-        </div>
         {categories.map((c) => (
           <div
             key={c.key}
