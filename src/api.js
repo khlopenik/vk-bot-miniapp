@@ -22,6 +22,13 @@ async function req(path, opts = {}, timeoutMs = 25000) {
 
 export const api = {
   me: (vk_id) => req(`/me?vk_id=${vk_id}`),
+  uploadPhoto: async (file) => {
+    const fd = new FormData()
+    fd.append('photo', file)
+    const res = await fetch(`${API_BASE}/upload-photo`, { method: 'POST', body: fd })
+    if (!res.ok) throw new Error('upload failed')
+    return res.json()
+  },
   tariffs: () => req('/tariffs'),
   models: () => req('/models'),
   history: (vk_id) => req(`/history?vk_id=${vk_id}`),

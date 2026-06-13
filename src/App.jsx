@@ -298,12 +298,13 @@ const QUALITY_DIA    = { std: 79, v2: 99, pro: 149 }
 function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToast }) {
   const qualities = (style.quality_modes || 'std,v2,pro').split(',').map(q => q.trim()).filter(q => QUALITY_MODEL[q])
   const [quality, setQuality]   = useState(qualities[0] || 'std')
-  const [photoUrl, setPhotoUrl] = useState('')
-  const [inputVal, setInputVal] = useState('')
-  const [busy, setBusy]         = useState(false)
-  const [error, setError]       = useState(null)
-  const [resultUrl, setResultUrl] = useState(null)
-  const [elapsed, setElapsed]   = useState(0)
+  const [photoUrl, setPhotoUrl]     = useState('')
+  const [photoFile, setPhotoFile]   = useState(null) // blob file для upload
+  const [inputVal, setInputVal]     = useState('')
+  const [busy, setBusy]             = useState(false)
+  const [error, setError]           = useState(null)
+  const [resultUrl, setResultUrl]   = useState(null)
+  const [elapsed, setElapsed]       = useState(0)
   const timerRef = useRef(null)
 
   const startTimer = () => { setElapsed(0); timerRef.current = setInterval(() => setElapsed(s => s + 1), 1000) }
@@ -317,7 +318,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
       const r = await bridge.send('VKWebAppOpenFiles', { count: 1 })
       const file = r?.files?.[0] || r?.urls?.[0]
       const url = typeof file === 'string' ? file : file?.url
-      if (url) setPhotoUrl(url)
+      if (url) { setPhotoUrl(url); setPhotoFile(null) }
       else fileInputRef.current?.click()
     } catch {
       fileInputRef.current?.click()
@@ -326,8 +327,8 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
   const onFileChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setPhotoUrl(url)
+    setPhotoFile(file)
+    setPhotoUrl(URL.createObjectURL(file)) // только для превью
   }
 
   const generate = async () => {
@@ -337,7 +338,13 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
     const modelKey = QUALITY_MODEL[quality]
     const promptFull = [style.prompt || '', inputVal].filter(Boolean).join(', ')
     try {
-      const r = await api.generate(vkId, photoUrl, modelKey, promptFull)
+      // Если фото выбрано через file input — сначала загружаем на сервер
+      let finalUrl = photoUrl
+      if (photoFile) {
+        const up = await api.uploadPhoto(photoFile)
+        finalUrl = up.url
+      }
+      const r = await api.generate(vkId, finalUrl, modelKey, promptFull)
       setResultUrl(r.result_url)
       onDone?.()
     } catch (e) {
@@ -463,20 +470,24 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
 
 /* ────────────────────────────────── НОВИЧОК ── */
 function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
-  const [categories, setCategories]   = useState(CATEGORIES) // fallback — static
-  const [activecat, setActivecat]     = useState(CATEGORIES[0]?.key || '')
+  const [categories, setCategories]   = useState([])
+  const [activecat, setActivecat]     = useState('')
   const [styles, setStyles]           = useState([])
-  const [loadingStyles, setLoadingStyles] = useState(false)
+  const [loadingStyles, setLoadingStyles] = useState(true)
 
   // Загружаем категории из Supabase при монтировании
   useEffect(() => {
     api.categories().then((cats) => {
       if (cats && cats.length > 0) {
-        const mapped = cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name }))
+        // emoji может дублироваться в name — убираем из label
+        const mapped = cats.map(c => ({ key: c.key, emoji: c.emoji, label: c.name.replace(/^\S+\s/, '') }))
         setCategories(mapped)
-        setActivecat(mapped[0].key) // первая категория активна по умолчанию, как в TG
+        setActivecat(mapped[0].key)
       }
-    }).catch(() => {})
+    }).catch(() => {
+      setCategories(CATEGORIES)
+      setActivecat(CATEGORIES[0]?.key || '')
+    })
   }, [])
 
   // Загружаем стили при смене категории
