@@ -1217,31 +1217,34 @@ function TariffList({ tariffs, busyKey, onBuy }) {
 }
 
 /* ────────────────────────────────── ИСТОРИЯ ── */
-function HistoryViewer({ url, onClose, showToast }) {
-  const save = () => {
-    // Извлекаем src из прокси-URL и делаем чистый /api/photo.jpg?src=...
-    const API = 'https://vk-bot-2vns.onrender.com'
-    let dlUrl
+function HistoryViewer({ url, vkId, onClose, showToast }) {
+  const [sending, setSending] = useState(false)
+
+  const sendToChat = async () => {
+    if (sending) return
+    setSending(true)
     try {
-      const u = new URL(url)
-      const src = u.searchParams.get('src') || url
-      dlUrl = `${API}/api/photo.jpg?src=${encodeURIComponent(src)}`
+      await api.sendPhoto(vkId, url)
+      showToast?.('📸 Фото отправлено в чат!')
+      onClose()
     } catch {
-      dlUrl = `${API}/api/photo.jpg?src=${encodeURIComponent(url)}`
+      showToast?.('Ошибка отправки, попробуй снова')
+    } finally {
+      setSending(false)
     }
-    bridge.send('VKWebAppDownloadFile', { url: dlUrl, filename: 'frame_photo.jpg' })
-      .catch(() => {
-        // Открываем прямую ссылку в браузере — там пользователь сохранит
-        bridge.send('VKWebAppOpenLink', { url: dlUrl })
-          .catch(() => { window.open(dlUrl, '_blank') })
-      })
   }
+
   return (
     <div className="hist-viewer-overlay" onClick={onClose}>
       <div className="hist-viewer-inner" onClick={e => e.stopPropagation()}>
         <button className="hist-viewer-close" onClick={onClose}>✕</button>
         <img className="hist-viewer-img" src={url} alt="" />
-        <button className="hist-viewer-save" onClick={save}>💾 Сохранить фото</button>
+        <button className="hist-viewer-save" onClick={sendToChat} disabled={sending}>
+          {sending ? '⏳ Отправляю...' : '📤 Отправить в чат'}
+        </button>
+        <div style={{fontSize:12,color:'rgba(255,255,255,.5)',textAlign:'center'}}>
+          Фото придёт в переписку — там долгое нажатие → сохранить
+        </div>
       </div>
     </div>
   )
@@ -1281,7 +1284,7 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
               ))}
             </div>
       }
-      {viewer && <HistoryViewer url={viewer} onClose={() => setViewer(null)} showToast={showToast} />}
+      {viewer && <HistoryViewer url={viewer} vkId={vkId} onClose={() => setViewer(null)} showToast={showToast} />}
     </>
   )
 }

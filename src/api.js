@@ -37,6 +37,7 @@ export const api = {
   support: (vk_id, kind) => req('/support', { method: 'POST', body: JSON.stringify({ vk_id, kind }) }),
   generate: (vk_id, photo_url, model_key, prompt, size = 'vert') =>
     req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt, size }) }, 120000),
+  sendPhoto: (vk_id, photo_url) => req('/send-photo', { method: 'POST', body: JSON.stringify({ vk_id, photo_url }) }, 30000),
   categories: () => req('/categories'),
   styles: (category_key) => req(`/styles/${category_key}`),
   styleOne: (style_id) => req(`/style-one/${style_id}`),
