@@ -336,17 +336,9 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
   const fmtTime    = (s) => `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`
 
   const fileInputRef = useRef(null)
-  const pickPhoto = async () => {
+  const pickPhoto = () => {
     setError(null)
-    try {
-      const r = await bridge.send('VKWebAppOpenFiles', { count: 1 })
-      const file = r?.files?.[0] || r?.urls?.[0]
-      const url = typeof file === 'string' ? file : file?.url
-      if (url) { setPhotoUrl(url); setPhotoFile(null) }
-      else fileInputRef.current?.click()
-    } catch {
-      fileInputRef.current?.click()
-    }
+    fileInputRef.current?.click()
   }
   const onFileChange = (e) => {
     const file = e.target.files?.[0]
@@ -730,17 +722,9 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToas
   const stopTimer = () => { clearInterval(timerRef.current); timerRef.current = null }
 
   const fileInputRef2 = useRef(null)
-  const pickPhoto = async () => {
+  const pickPhoto = () => {
     setError(null)
-    try {
-      const r = await bridge.send('VKWebAppOpenFiles', { count: 1 })
-      const file = r?.files?.[0] || r?.urls?.[0]
-      const url = typeof file === 'string' ? file : file?.url
-      if (url) setPhotoUrl(url)
-      else fileInputRef2.current?.click()
-    } catch {
-      fileInputRef2.current?.click()
-    }
+    fileInputRef2.current?.click()
   }
   const onFileChange2 = (e) => {
     const file = e.target.files?.[0]
