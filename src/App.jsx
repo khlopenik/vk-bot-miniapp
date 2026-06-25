@@ -161,6 +161,8 @@ export default function App() {
   const [genPreset, setGenPreset] = useState(null)
   const [galleryStyle, setGalleryStyle] = useState(null) // экран генерации из галереи
   const [toastMsg, showToast] = useToast()
+  // VK: оплата разрешена только на vk.ru/m.vk.ru — на нативных iOS/Android её нужно скрывать
+  const [canPay, setCanPay] = useState(true)
 
   const refreshMe = useCallback((id) => {
     if (!id) return
@@ -190,7 +192,11 @@ export default function App() {
       handleHash(searchHash || locationHash)
     }
     bridge.send('VKWebAppGetLaunchParams')
-      .then(p => { if (p?.hash) handleHash(p.hash) })
+      .then(p => {
+        if (p?.hash) handleHash(p.hash)
+        // vk_platform: desktop_web/mobile_web — разрешено; android/iphone/ipad/messenger — нет
+        if (p?.vk_platform && !String(p.vk_platform).includes('web')) setCanPay(false)
+      })
       .catch(() => {})
 
     const timeout = (ms) => new Promise((_, r) => setTimeout(() => r(new Error('to')), ms))
@@ -237,7 +243,7 @@ export default function App() {
             <ProfiTab vkId={vkUser?.id} me={me} preset={genPreset} onDone={() => refreshMe(vkUser?.id)} onGoTariffs={goTariffs} onGoProfile={goProfile} showToast={showToast} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
           {activeTab === 'tariffs' && (
-            <TariffsTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
+            <TariffsTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} canPay={canPay} />
           )}
           {activeTab === 'history' && (
             <HistoryTab vkId={vkUser?.id} me={me} showToast={showToast} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
@@ -990,7 +996,7 @@ function BuilderSheet({ open, onClose, onBuy }) {
 }
 
 /* ────────────────────────────────── ТАРИФЫ ── */
-function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }) {
+function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, canPay = true }) {
   const [level, setLevel] = useState('novice') // novice | advanced
   const [qTab, setQTab] = useState('std')
   const [couplesQ, setCouplesQ] = useState('std')
@@ -1041,6 +1047,19 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
     if (qTab === 'family')  return FAMILY_TARIFFS
     if (qTab === 'couples') return couplesQ === 'std' ? COUPLES_STD : couplesQ === 'v2' ? COUPLES_V2 : COUPLES_PRO
     return []
+  }
+
+  if (!canPay) {
+    return (
+      <>
+        <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
+        <div className="promo-block" style={{padding:16,lineHeight:1.5}}>
+          Покупка тарифов доступна только в версии ВКонтакте для компьютера или браузера
+          (vk.ru / m.vk.ru). Открой приложение там, чтобы пополнить баланс — здесь, в мобильном
+          приложении, доступна работа с уже купленными фото.
+        </div>
+      </>
+    )
   }
 
   return (
