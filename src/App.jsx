@@ -13,7 +13,6 @@ const CATEGORIES = [
   { emoji: '🎂', label: 'Праздник',     key: 'holiday' },
   { emoji: '💑', label: 'Парные',       key: 'couples' },
   { emoji: '👨‍👩‍👧', label: 'Семья',       key: 'family' },
-  { emoji: '🌸', label: 'Ню',           key: 'nude' },
   { emoji: '💃', label: 'Танцы',        key: 'dance' },
   { emoji: '🎬', label: 'Видео',        key: 'video' },
   { emoji: '✈️', label: 'Путешествия',  key: 'travel' },
@@ -96,12 +95,6 @@ const PRO_TARIFFS = [
   { key: 'pro_10', label: '10 фото', perPhoto: '119 ₽/фото', price: '1 190 ₽', discount: '−20%' },
   { key: 'pro_30', label: '30 фото', perPhoto: '83 ₽/фото',  price: '2 490 ₽', discount: '−44%', popular: true },
   { key: 'pro_50', label: '50 фото', perPhoto: '80 ₽/фото',  price: '3 990 ₽', discount: '−46%', best: true },
-]
-const NUDE_TARIFFS = [
-  { key: 'nude_3',  label: '3 фото',  perPhoto: '83 ₽/фото', price: '249 ₽' },
-  { key: 'nude_5',  label: '5 фото',  perPhoto: '78 ₽/фото', price: '390 ₽', popular: true },
-  { key: 'nude_10', label: '10 фото', perPhoto: '69 ₽/фото', price: '690 ₽',   discount: '−17%' },
-  { key: 'nude_20', label: '20 фото', perPhoto: '59 ₽/фото', price: '1 190 ₽', discount: '−29%', best: true },
 ]
 const FAMILY_TARIFFS = [
   { key: 'family_1', label: '1 портрет',  perPhoto: '',              price: '390 ₽' },
@@ -905,17 +898,16 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToas
 }
 
 /* ── Конструктор «Собери свой набор» ── */
-const BUILDER_BASE = { std: 79, v2: 99, pro: 149, nude: 89, family: 390, video: 390, couples: 149 }
-const BUILDER_UNIT_LABEL = { std: 'фото', v2: 'фото', pro: 'фото', nude: 'фото', family: 'портрет', video: 'видео', couples: 'фото' }
+const BUILDER_BASE = { std: 79, v2: 99, pro: 149, family: 390, video: 390, couples: 149 }
+const BUILDER_UNIT_LABEL = { std: 'фото', v2: 'фото', pro: 'фото', family: 'портрет', video: 'видео', couples: 'фото' }
 const BUILDER_CATS = [
   ['std', '⭐ Стандарт'], ['v2', '✨ Версия 2'], ['pro', '💎 Про'],
-  ['nude', '🌸 Ню'], ['family', '👨‍👩‍👧 Семейный'], ['video', '🎬 Оживление'], ['couples', '💑 Парные фото'],
+  ['family', '👨‍👩‍👧 Семейный'], ['video', '🎬 Оживление'], ['couples', '💑 Парные фото'],
 ]
 function getUnitPrice(cat, qty) {
   if (cat === 'std')    { if (qty>=50) return 39; if (qty>=30) return 49; if (qty>=10) return 59; return 79 }
   if (cat === 'v2')     { if (qty>=50) return 49; if (qty>=30) return 63; if (qty>=10) return 79; return 99 }
   if (cat === 'pro')    { if (qty>=50) return 80; if (qty>=30) return 83; if (qty>=10) return 119; return 149 }
-  if (cat === 'nude')   { if (qty>=20) return 59; if (qty>=10) return 69; if (qty>=5) return 78; if (qty>=3) return 83; return 89 }
   if (cat === 'family') { if (qty>=5) return 298; if (qty>=3) return 330; return 390 }
   if (cat === 'video')  { if (qty>=3) return 330; return 390 }
   if (cat === 'couples'){ if (qty>=10) return 119; if (qty>=5) return 129; if (qty>=3) return 139; return 149 }
@@ -925,8 +917,8 @@ const SITE_DISCOUNT = 50 // акция −50%
 
 /* Bottom-sheet конструктора */
 function BuilderSheet({ open, onClose, onBuy }) {
-  const [qty, setQty] = useState({ std:0, v2:0, pro:0, nude:0, family:0, video:0, couples:0 })
-  useEffect(() => { if (open) setQty({ std:0, v2:0, pro:0, nude:0, family:0, video:0, couples:0 }) }, [open])
+  const [qty, setQty] = useState({ std:0, v2:0, pro:0, family:0, video:0, couples:0 })
+  useEffect(() => { if (open) setQty({ std:0, v2:0, pro:0, family:0, video:0, couples:0 }) }, [open])
   const step = (cat, d) => setQty(q => ({ ...q, [cat]: Math.max(0, q[cat] + d) }))
   const mult = (100 - SITE_DISCOUNT) / 100
 
@@ -943,7 +935,7 @@ function BuilderSheet({ open, onClose, onBuy }) {
   })
 
   const buyNow = () => {
-    const key = `build_${qty.std}_${qty.v2}_${qty.pro}_${qty.nude}_${qty.family}_${qty.video}`
+    const key = `build_${qty.std}_${qty.v2}_${qty.pro}_${qty.family}_${qty.video}`
     onBuy(key)
   }
 
@@ -959,7 +951,6 @@ function BuilderSheet({ open, onClose, onBuy }) {
             <span className="builder-hero-chip bchip-std">⭐ Стандарт</span>
             <span className="builder-hero-chip bchip-v2">✨ Версия 2</span>
             <span className="builder-hero-chip bchip-pro">💎 Про</span>
-            <span className="builder-hero-chip bchip-nude">🌸 Ню</span>
             <span className="builder-hero-chip bchip-family">👨‍👩‍👧 Семейный</span>
             <span className="builder-hero-chip bchip-video">🎬 Видео</span>
             <span className="builder-hero-chip bchip-couples">💑 Парные</span>
@@ -1040,14 +1031,13 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
 
   const NoviceQTabs = [
     ['std','⭐ Стандарт'], ['v2','✨ Версия 2'], ['pro','💎 Про'],
-    ['nude','🌸 Ню'], ['family','👨‍👩‍👧 Семья'], ['couples','💑 Парные'], ['video','🎬 Видео'],
+    ['family','👨‍👩‍👧 Семья'], ['couples','💑 Парные'], ['video','🎬 Видео'],
   ]
 
   const getTariffs = () => {
     if (qTab === 'std')     return STD_TARIFFS
     if (qTab === 'v2')      return V2_TARIFFS
     if (qTab === 'pro')     return PRO_TARIFFS
-    if (qTab === 'nude')    return NUDE_TARIFFS
     if (qTab === 'family')  return FAMILY_TARIFFS
     if (qTab === 'couples') return couplesQ === 'std' ? COUPLES_STD : couplesQ === 'v2' ? COUPLES_V2 : COUPLES_PRO
     return []
@@ -1140,7 +1130,7 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
           <div className="builder-top-banner" onClick={() => setBuilderOpen(true)}>
             <div className="builder-top-badge">🏗 СОБЕРИ СВОЙ ФОРМАТ — ВЫГОДНЕЕ</div>
             <div className="builder-top-title">Свой набор</div>
-            <div className="builder-top-sub">Стандарт · Версия 2 · Про · Ню · Семья · Видео<br/>Выбираешь сам сколько каких — чем больше, тем дешевле</div>
+            <div className="builder-top-sub">Стандарт · Версия 2 · Про · Семья · Видео<br/>Выбираешь сам сколько каких — чем больше, тем дешевле</div>
             <div style={{marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
               <div style={{fontSize:18,opacity:.35}}>🍌</div>
               <div style={{background:'linear-gradient(135deg,#22c55e,#16a34a)',color:'#fff',fontSize:13,fontWeight:800,padding:'7px 18px',borderRadius:10}}>Собрать →</div>
@@ -1154,8 +1144,8 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
                 <button key={k} className={`q-tab${qTab===k?' active':''}`} onClick={() => setQTab(k)}>{l}</button>
               ))}
             </div>
-            <div className="q-tabs-row" style={{gridTemplateColumns:'repeat(4,1fr)'}}>
-              {[['nude','🌸 Ню'],['family','👨‍👩‍👧 Семья'],['couples','💑 Парные'],['video','🎬 Видео']].map(([k,l]) => (
+            <div className="q-tabs-row" style={{gridTemplateColumns:'repeat(3,1fr)'}}>
+              {[['family','👨‍👩‍👧 Семья'],['couples','💑 Парные'],['video','🎬 Видео']].map(([k,l]) => (
                 <button key={k} className={`q-tab${qTab===k?' active':''}`} onClick={() => setQTab(k)}>{l}</button>
               ))}
             </div>
@@ -1488,7 +1478,6 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
           </div>
           <div className="bal-row" style={{marginTop:8,paddingTop:8,borderTop:'1px solid rgba(255,255,255,.06)'}}>
             <div className="bal-item"><div className="bal-num p">{me?.diamond_credits ?? '—'}</div><div className="bal-label">💠 Алмазы</div></div>
-            <div className="bal-item"><div className="bal-num v">{me?.nude_credits ?? 0}</div><div className="bal-label">🌸 Ню</div></div>
             <div className="bal-item"><div className="bal-num m">{me?.video_credits ?? 0}</div><div className="bal-label">🎬 Видео</div></div>
           </div>
         </div>
