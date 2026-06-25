@@ -1014,7 +1014,7 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, 
       const r = await api.pay(vkId, key)
       // r.ok = новый формат, r.sent_to_chat/confirmation_url = старый
       if (r.ok || r.sent_to_chat || r.confirmation_url) {
-        showToast('✅ Открой сообщения с ботом — там кнопка оплаты 💳')
+        showToast('✅ Сейчас откроется диалог с сообществом «FRAME» — там придёт кнопка оплаты 💳')
         setTimeout(() => {
           bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
         }, 1500)
@@ -1521,9 +1521,9 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
           )}
         </div>
 
-        {/* Referral */}
+        {/* Referral — бонус для друзей: фото на баланс, не деньги */}
         <div className="ref-box">
-          <div className="ref-box-title">🤝 Приглашай · зарабатывай бонусы</div>
+          <div className="ref-box-title">🤝 Приглашай друзей — получай бонусные фото</div>
           <div className="ref-stats-row">
             <div className="ref-stat-box">
               <div className="ref-stat-num">{me?.ref_count ?? 0}</div>
@@ -1535,8 +1535,10 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
             </div>
           </div>
           <div className="info-row-text" style={{marginBottom:10}}>
-            👥 За каждого друга → <span style={{color:'#4ade80',fontWeight:700}}>+5 фото</span> тебе на баланс<br/>
-            🚀 5+ человек → скидка <span style={{color:'#4ade80',fontWeight:700}}>−10%</span> навсегда
+            Программа — только для приглашения друзей. Когда твой друг по этой ссылке
+            совершит первую покупку любого тарифа, тебе начисляется <span style={{color:'#4ade80',fontWeight:700}}>+5 фото</span> на
+            баланс (не деньги — расходный кредит на генерацию). Когда у тебя будет 5+ таких друзей —
+            постоянная скидка <span style={{color:'#4ade80',fontWeight:700}}>−10%</span> на все покупки.
           </div>
           <div className="ref-link">{refLink}</div>
           <button className={`ref-copy-btn${copied?' copied':''}`} onClick={copyRef}>
@@ -1544,14 +1546,18 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
           </button>
         </div>
 
-        {/* Partner — дашборд если уже партнёр, кнопка если нет */}
+        {/* Partner — дашборд если уже партнёр, кнопка если нет. Выплата деньгами, не алмазами */}
         {me?.is_partner ? (
           <PartnerDashboard me={me} vkId={vkId} showToast={showToast} />
         ) : (
           <div className="info-row">
-            <div className="info-row-title">💰 Партнёрская программа</div>
+            <div className="info-row-title">💰 Партнёрская программа (для друзей)</div>
             <div className="info-row-text">
-              Приводи людей в FRAME и получай <span style={{color:'#4ade80',fontWeight:700}}>30%</span> с каждой их оплаты — навсегда. 🤑
+              Программа предназначена для приглашения друзей. Став партнёром, ты получаешь
+              отдельную партнёрскую ссылку: с каждой оплаты приглашённого по ней друга тебе
+              начисляется <span style={{color:'#4ade80',fontWeight:700}}>30% деньгами</span> (не алмазами и не фото) —
+              всё время, пока друг продолжает оплачивать тарифы. Накопленную сумму можно
+              запросить к выплате через поддержку.
             </div>
             <button className="big-btn purple" style={{marginTop:12}} onClick={handleBecomePartner}>
               🚀 Стать партнёром
