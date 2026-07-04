@@ -1,7 +1,16 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from 'react'
 import bridge from '@vkontakte/vk-bridge'
 import { api } from './api'
 import './App.css'
+
+// Оплата разрешена правилами VK только на vk.ru/m.vk.ru. На нативных iOS/Android
+// нельзя показывать НИ оплату, НИ подсказки о ней (даже текстом). Значение задаётся
+// один раз при старте из vk_platform и раздаётся всем компонентам через контекст.
+const PayContext = createContext(true)
+const useCanPay = () => useContext(PayContext)
+
+// ID сообщества FRAME — для ссылок «написать в поддержку» / диалога
+const VK_GROUP_ID = 239444342
 
 /* ── DATA ── */
 const CATEGORIES = [
@@ -211,8 +220,16 @@ export default function App() {
   const goProfile = () => setActiveTab('profile')
   const openGalleryStyle = (style) => setGalleryStyle(style)
 
+  // На мобильных платежи скрыты — вкладка «Тарифы» тоже убирается из нижнего меню,
+  // а баннер акции не показывается. Активную вкладку сбрасываем, если она стала недоступна.
+  const visibleTabs = canPay ? TABS : TABS.filter(t => t.id !== 'tariffs')
+  useEffect(() => {
+    if (!canPay && activeTab === 'tariffs') setActiveTab('novichok')
+  }, [canPay, activeTab])
+  const showBanner = bannerVisible && canPay
+
   return (
-    <>
+    <PayContext.Provider value={canPay}>
       <div className="frame-app">
         {/* Экран генерации из галереи (поверх всего) */}
         {galleryStyle && (
@@ -227,7 +244,7 @@ export default function App() {
           />
         )}
 
-        {!galleryStyle && bannerVisible && (
+        {!galleryStyle && showBanner && (
           <div className="sale-banner" onClick={goTariffs}>
             <span className="sb-fire">🔥</span>
             <div className="sb-text"><b>−50%</b> на все тарифы · Только сейчас!</div>
@@ -235,7 +252,7 @@ export default function App() {
           </div>
         )}
 
-        {!galleryStyle && <div className={`page-wrap${bannerVisible ? ' has-banner' : ''}`}>
+        {!galleryStyle && <div className={`page-wrap${showBanner ? ' has-banner' : ''}`}>
           {activeTab === 'novichok' && (
             <NovichokTab me={me} onRepeat={openGalleryStyle} onGoTariffs={goTariffs} onGoProfile={goProfile} onRefresh={() => refreshMe(vkUser?.id)} />
           )}
@@ -254,7 +271,7 @@ export default function App() {
         </div>}
 
         {!galleryStyle && <nav className="bottom-nav">
-          {TABS.map(({ id, icon, label }) => (
+          {visibleTabs.map(({ id, icon, label }) => (
             <button
               key={id}
               className={`nav-item${activeTab === id ? ' active' : ''}`}
@@ -268,13 +285,14 @@ export default function App() {
 
         <Toast msg={toastMsg} />
       </div>
-    </>
+    </PayContext.Provider>
   )
 }
 
 /* ── TOPBAR ── */
 function TopBar({ me, onGoProfile, onGoTariffs, onRefresh }) {
   const [open, setOpen] = useState(false)
+  const canPay = useCanPay()
   const diamond = me?.diamond_credits ?? 0
   const std     = me?.std_credits ?? 0
   const v2      = me?.v2_credits ?? 0
@@ -299,7 +317,7 @@ function TopBar({ me, onGoProfile, onGoTariffs, onRefresh }) {
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'#aaa'}}>💎 Про</span><b>{pro}</b></div>
           {gift > 0 && <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><span style={{color:'#aaa'}}>🎁 Подарок</span><b>{gift}</b></div>}
           <div style={{borderTop:'1px solid rgba(255,255,255,.08)',marginTop:8,paddingTop:8,display:'flex',justifyContent:'space-between'}}><span style={{color:'#aaa'}}>Всего фото</span><b style={{color:'#a78bfa'}}>{total}</b></div>
-          <button onClick={e=>{e.stopPropagation();setOpen(false);onGoTariffs&&onGoTariffs()}} style={{marginTop:12,width:'100%',background:'linear-gradient(135deg,#7c3aed,#2563eb)',border:'none',borderRadius:9,color:'#fff',fontWeight:700,padding:'9px 0',cursor:'pointer',fontSize:13}}>💳 Пополнить</button>
+          {canPay && <button onClick={e=>{e.stopPropagation();setOpen(false);onGoTariffs&&onGoTariffs()}} style={{marginTop:12,width:'100%',background:'linear-gradient(135deg,#7c3aed,#2563eb)',border:'none',borderRadius:9,color:'#fff',fontWeight:700,padding:'9px 0',cursor:'pointer',fontSize:13}}>💳 Пополнить</button>}
         </div>
       )}
     </div>
@@ -314,6 +332,7 @@ const QUALITY_DIA    = { std: 79, v2: 99, pro: 149 }
 
 /* ────────────────────────────── ГАЛЕРЕЙНАЯ ГЕНЕРАЦИЯ ── */
 function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToast }) {
+  const canPay = useCanPay()
   // Семейный multi-стиль: грузим ПО ОДНОМУ фото на каждого человека → gpt4o собирает портрет
   const isMulti     = style.upload_mode === 'multi'
   const peopleCount = Math.min(6, Math.max(1, style.photo_count || 2))
@@ -543,7 +562,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
       </div>
       {credits === 0 && diamond < QUALITY_DIA[quality] && (
         <div style={{fontSize:12,color:'#ef4444',marginTop:8,textAlign:'center'}}>
-          Нет кредитов {QUALITY_LABEL[quality]} — <span style={{color:'#a78bfa',cursor:'pointer'}} onClick={onGoTariffs}>пополнить →</span>
+          Нет кредитов {QUALITY_LABEL[quality]}{canPay && <> — <span style={{color:'#a78bfa',cursor:'pointer'}} onClick={onGoTariffs}>пополнить →</span></>}
         </div>
       )}
 
@@ -593,6 +612,7 @@ function GalleryGenView({ style, vkId, me, onBack, onDone, onGoTariffs, showToas
 
 /* ────────────────────────────────── НОВИЧОК ── */
 function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
+  const canPay = useCanPay()
   const [categories, setCategories]   = useState([])
   const [activecat, setActivecat]     = useState('')
   const [styles, setStyles]           = useState([])
@@ -628,7 +648,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
         <div className="diamond-chip">
           💎 <span>{me?.diamond_credits ?? '–'}</span>
         </div>
-        <button className="diamond-topup" onClick={onGoTariffs}>Пополнить ▸</button>
+        {canPay && <button className="diamond-topup" onClick={onGoTariffs}>Пополнить ▸</button>}
       </div>
 
       {/* Категории */}
@@ -698,6 +718,7 @@ function NovichokTab({ me, onRepeat, onGoTariffs, onGoProfile, onRefresh }) {
 
 /* ────────────────────────────────── ПРОФИ ── */
 function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToast, onRefresh }) {
+  const canPay = useCanPay()
   const [modelCat, setModelCat] = useState('photo') // photo | video | music
   const [selectedModel, setSelectedModel] = useState(null)
   const [modelSheetOpen, setModelSheetOpen] = useState(false)
@@ -768,7 +789,7 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToas
       <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
       <div className="diamond-bar">
         <div className="diamond-chip">💎 <span>{me?.diamond_credits ?? '–'}</span></div>
-        <button className="diamond-topup" onClick={onGoTariffs}>Пополнить ▸</button>
+        {canPay && <button className="diamond-topup" onClick={onGoTariffs}>Пополнить ▸</button>}
       </div>
       <div className="pro-wrap">
         <div className="pro-field-label">Модель</div>
@@ -819,7 +840,7 @@ function ProfiTab({ vkId, me, preset, onDone, onGoTariffs, onGoProfile, showToas
           {error && (
             <div>
               <div className="error-msg">{error}</div>
-              {error.includes('кредит') && (
+              {error.includes('кредит') && canPay && (
                 <button className="big-btn dark" style={{marginTop:8}} onClick={onGoTariffs}>Пополнить баланс →</button>
               )}
             </div>
@@ -1012,12 +1033,15 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, 
     showToast('⏳ Создаём оплату... (~30 сек)')
     try {
       const r = await api.pay(vkId, key)
-      // r.ok = новый формат, r.sent_to_chat/confirmation_url = старый
-      if (r.ok || r.sent_to_chat || r.confirmation_url) {
-        showToast('✅ Сейчас откроется диалог с сообществом «FRAME» — там придёт кнопка оплаты 💳')
-        setTimeout(() => {
-          bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
-        }, 1500)
+      if (r.confirmation_url) {
+        // Открываем страницу оплаты ЮKassa напрямую (внешний URL). Параметр именно `url`.
+        showToast('✅ Открываем безопасную оплату ЮKassa 💳')
+        bridge.send('VKWebAppOpenLink', { url: r.confirmation_url })
+          .catch(() => { window.open(r.confirmation_url, '_blank') })
+      } else if (r.ok || r.sent_to_chat) {
+        // Фолбэк: ссылка пришла кнопкой в диалог сообщества
+        showToast('✅ Кнопка оплаты отправлена в диалог с сообществом «FRAME» 💳')
+        window.open(`https://vk.me/club${VK_GROUP_ID}`, '_blank')
       } else showToast('Ошибка оплаты')
     } catch (e) {
       const msg = e?.message || ''
@@ -1049,14 +1073,15 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, 
     return []
   }
 
+  // На мобильных вкладка «Тарифы» вообще не доступна (скрыта из меню). Подстраховка:
+  // если сюда как-то попали без права оплаты — не показываем ничего про оплату.
   if (!canPay) {
     return (
       <>
         <TopBar me={me} onGoProfile={onGoProfile} onGoTariffs={onGoTariffs} onRefresh={onRefresh} />
         <div className="promo-block" style={{padding:16,lineHeight:1.5}}>
-          Покупка тарифов доступна только в версии ВКонтакте для компьютера или браузера
-          (vk.ru / m.vk.ru). Открой приложение там, чтобы пополнить баланс — здесь, в мобильном
-          приложении, доступна работа с уже купленными фото.
+          Здесь ты работаешь со своими нейрофото. Открой любой стиль в разделе «Новичок»
+          или «Профи» и создай фото.
         </div>
       </>
     )
@@ -1438,10 +1463,12 @@ function PartnerDashboard({ me, vkId, showToast }) {
       </button>
       <div className="partner-payout-note">
         Выплаты — по запросу в поддержку:{' '}
-        <span
-          style={{color:'#a78bfa',cursor:'pointer',textDecoration:'underline'}}
-          onClick={() => bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/l_khlopenik' }).catch(()=>{})}
-        >@l_khlopenik</span>
+        <a
+          href="https://vk.com/l_khlopenik"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{color:'#a78bfa',textDecoration:'underline'}}
+        >@l_khlopenik</a>
       </div>
     </div>
   )
@@ -1449,6 +1476,7 @@ function PartnerDashboard({ me, vkId, showToast }) {
 
 /* ────────────────────────────────── ПРОФИЛЬ ── */
 function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onRefresh }) {
+  const canPay = useCanPay()
   const [promo, setPromo] = useState('')
   const [promoMsg, setPromoMsg] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -1501,6 +1529,7 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
           </div>
         </div>
 
+        {canPay && <>
         <button className="big-btn purple" onClick={onGoTariffs}>💳 Пополнить баланс</button>
 
         {/* Promo */}
@@ -1564,11 +1593,18 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
             </button>
           </div>
         )}
+        </>}
 
-        {/* Support */}
-        <button className="big-btn dark" onClick={() => openSupport(vkId, 'support', showToast)}>
+        {/* Support — прямая ссылка на диалог с сообществом (работает на всех платформах) */}
+        <a
+          className="big-btn dark"
+          href={`https://vk.me/club${VK_GROUP_ID}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{display:'block',textAlign:'center',textDecoration:'none'}}
+        >
           💬 Написать в поддержку
-        </button>
+        </a>
 
         <div style={{height:24}} />
       </div>
