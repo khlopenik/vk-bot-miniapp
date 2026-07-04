@@ -170,8 +170,16 @@ export default function App() {
   const [genPreset, setGenPreset] = useState(null)
   const [galleryStyle, setGalleryStyle] = useState(null) // экран генерации из галереи
   const [toastMsg, showToast] = useToast()
-  // VK: оплата разрешена только на vk.ru/m.vk.ru — на нативных iOS/Android её нужно скрывать
-  const [canPay, setCanPay] = useState(true)
+  // VK: оплата разрешена только на vk.ru/m.vk.ru — на нативных iOS/Android её нужно скрывать.
+  // Читаем vk_platform СИНХРОННО из URL (он там всегда есть при запуске в VK), чтобы на
+  // нативных клиентах оплата не мелькнула ни на кадр. web → можно, всё остальное → нельзя.
+  const [canPay, setCanPay] = useState(() => {
+    try {
+      const p = new URLSearchParams(window.location.search).get('vk_platform') || ''
+      if (p) return p.includes('web')   // desktop_web / mobile_web → true; android/iphone/ipad → false
+    } catch {}
+    return false   // неизвестно → безопаснее скрыть оплату
+  })
 
   const refreshMe = useCallback((id) => {
     if (!id) return
@@ -203,8 +211,8 @@ export default function App() {
     bridge.send('VKWebAppGetLaunchParams')
       .then(p => {
         if (p?.hash) handleHash(p.hash)
-        // vk_platform: desktop_web/mobile_web — разрешено; android/iphone/ipad/messenger — нет
-        if (p?.vk_platform && !String(p.vk_platform).includes('web')) setCanPay(false)
+        // Уточняем платформу от bridge (в обе стороны): web → оплата можно, иначе нельзя
+        if (p?.vk_platform) setCanPay(String(p.vk_platform).includes('web'))
       })
       .catch(() => {})
 
@@ -1025,6 +1033,7 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, 
   const [promoStatus, setPromoStatus] = useState(null)
   const [busyKey, setBusyKey] = useState(null)
   const [builderOpen, setBuilderOpen] = useState(false)
+  const [payUrl, setPayUrl] = useState(null)   // ссылка ЮKassa для кнопки «Перейти к оплате»
 
   const buy = async (key) => {
     if (!vkId) { showToast('Нет vk_id'); return }
@@ -1034,14 +1043,11 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, 
     try {
       const r = await api.pay(vkId, key)
       if (r.confirmation_url) {
-        // Открываем страницу оплаты ЮKassa напрямую (внешний URL). Параметр именно `url`.
-        showToast('✅ Открываем безопасную оплату ЮKassa 💳')
-        bridge.send('VKWebAppOpenLink', { url: r.confirmation_url })
-          .catch(() => { window.open(r.confirmation_url, '_blank') })
+        // Показываем настоящую кнопку-ссылку — по клику пользователя откроется
+        // страница оплаты ЮKassa. Надёжнее bridge (его OpenLink на web не поддержан).
+        setPayUrl(r.confirmation_url)
       } else if (r.ok || r.sent_to_chat) {
-        // Фолбэк: ссылка пришла кнопкой в диалог сообщества
         showToast('✅ Кнопка оплаты отправлена в диалог с сообществом «FRAME» 💳')
-        window.open(`https://vk.me/club${VK_GROUP_ID}`, '_blank')
       } else showToast('Ошибка оплаты')
     } catch (e) {
       const msg = e?.message || ''
@@ -1241,6 +1247,29 @@ function TariffsTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh, 
       )}
 
       <BuilderSheet open={builderOpen} onClose={() => setBuilderOpen(false)} onBuy={(key) => { setBuilderOpen(false); buy(key) }} />
+
+      {payUrl && (
+        <div className="pay-modal-overlay" onClick={() => setPayUrl(null)}>
+          <div className="pay-modal" onClick={e => e.stopPropagation()}>
+            <div className="pay-modal-title">💳 Оплата готова</div>
+            <div style={{fontSize:13,color:'#aaa',lineHeight:1.5,margin:'8px 0 16px',textAlign:'center'}}>
+              Нажми кнопку — откроется безопасная оплата через ЮKassa.
+              После оплаты кредиты зачислятся автоматически.
+            </div>
+            <a
+              className="big-btn purple"
+              href={payUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => { showToast('После оплаты вернись в приложение 💜'); setTimeout(() => setPayUrl(null), 500) }}
+              style={{display:'block',textAlign:'center',textDecoration:'none'}}
+            >
+              💳 Перейти к оплате
+            </a>
+            <button className="pay-modal-cancel" onClick={() => setPayUrl(null)} style={{marginTop:10}}>Отмена</button>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -1401,20 +1430,13 @@ function HistoryTab({ vkId, me, showToast, onGoTariffs, onGoProfile, onRefresh }
 
 /* Поддержка → открываем личку админа напрямую.
    Партнёр → становится партнёром, callback с обновлёнными данными. */
+// Регистрация партнёра. Поддержка теперь — прямая ссылка <a> в интерфейсе, не через эту функцию.
 async function openSupport(vkId, kind, showToast, onPartnerDone) {
   if (!vkId) { showToast && showToast('Нет vk_id'); return }
   try {
     const r = await api.support(vkId, kind)
-    if (kind === 'partner') {
-      showToast && showToast('🎉 Ты теперь партнёр! Приводи людей и зарабатывай 30% 🤑')
-      onPartnerDone && onPartnerDone(r)
-    } else {
-      // Бот уже отправил гиперссылку на Любовь в чат — открываем чат с ботом
-      showToast && showToast('💬 Открой сообщения с ботом — там ссылка на поддержку')
-      setTimeout(() => {
-        bridge.send('VKWebAppOpenLink', { link: 'https://vk.com/im?sel=-239444342' }).catch(() => {})
-      }, 1200)
-    }
+    showToast && showToast('🎉 Ты теперь партнёр! Приводи друзей и зарабатывай 30% 🤑')
+    onPartnerDone && onPartnerDone(r)
   } catch {
     showToast && showToast('Не получилось, попробуй ещё раз')
   }
