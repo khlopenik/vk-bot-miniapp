@@ -170,16 +170,19 @@ export default function App() {
   const [genPreset, setGenPreset] = useState(null)
   const [galleryStyle, setGalleryStyle] = useState(null) // экран генерации из галереи
   const [toastMsg, showToast] = useToast()
-  // VK: оплата разрешена только на vk.ru/m.vk.ru — на нативных iOS/Android её нужно скрывать.
-  // Читаем vk_platform СИНХРОННО из URL (он там всегда есть при запуске в VK), чтобы на
-  // нативных клиентах оплата не мелькнула ни на кадр. web → можно, всё остальное → нельзя.
-  const [canPay, setCanPay] = useState(() => {
+  // ⚠️ ВРЕМЕННО: оплата включена на ВСЕХ платформах (в т.ч. мобильных) через ЮKassa,
+  // чтобы клиенты могли покупать, пока VK не активировал монетизацию для VK Pay.
+  // Когда VK Pay заработает — вернуть логику по vk_platform (web → true, натив → false)
+  // и подключить нативную оплату VK на мобильных. См. память project-vk-pay-migration.
+  const PAYMENTS_MOBILE_ENABLED = true
+  const detectCanPay = () => {
     try {
       const p = new URLSearchParams(window.location.search).get('vk_platform') || ''
-      if (p) return p.includes('web')   // desktop_web / mobile_web → true; android/iphone/ipad → false
+      if (p) return p.includes('web')
     } catch {}
-    return false   // неизвестно → безопаснее скрыть оплату
-  })
+    return false
+  }
+  const [canPay, setCanPay] = useState(() => PAYMENTS_MOBILE_ENABLED ? true : detectCanPay())
 
   const refreshMe = useCallback((id) => {
     if (!id) return
@@ -211,8 +214,9 @@ export default function App() {
     bridge.send('VKWebAppGetLaunchParams')
       .then(p => {
         if (p?.hash) handleHash(p.hash)
-        // Уточняем платформу от bridge (в обе стороны): web → оплата можно, иначе нельзя
-        if (p?.vk_platform) setCanPay(String(p.vk_platform).includes('web'))
+        // ⚠️ ВРЕМЕННО отключено: пока оплата включена на всех платформах (PAYMENTS_MOBILE_ENABLED).
+        // Когда вернём VK Pay — раскомментировать:
+        // if (p?.vk_platform) setCanPay(String(p.vk_platform).includes('web'))
       })
       .catch(() => {})
 
