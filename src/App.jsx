@@ -961,11 +961,13 @@ function BuilderSheet({ open, onClose, onBuy }) {
   const step = (cat, d) => setQty(q => ({ ...q, [cat]: Math.max(0, q[cat] + d) }))
   const mult = (100 - SITE_DISCOUNT) / 100
 
+  // Скидка считается ПОСТРОЧНО с округлением ВНИЗ (Math.floor) — точно так же на бэкенде,
+  // чтобы сумма в приложении до рубля совпадала со списанием ЮKassa (требование модерации VK).
   let total = 0, hasBulk = false
   const rows = BUILDER_CATS.map(([cat, label]) => {
     const n = qty[cat]
     const unitRaw = n > 0 ? getUnitPrice(cat, n) : BUILDER_BASE[cat]
-    const unit = Math.round(unitRaw * mult)
+    const unit = Math.floor(unitRaw * mult)
     const sub = n * unit
     const bulk = n > 0 && unitRaw < BUILDER_BASE[cat]
     if (bulk) hasBulk = true
@@ -974,7 +976,9 @@ function BuilderSheet({ open, onClose, onBuy }) {
   })
 
   const buyNow = () => {
-    const key = `build_${qty.std}_${qty.v2}_${qty.pro}_${qty.family}_${qty.video}`
+    // Ключ включает ВСЕ категории конструктора, в т.ч. «парные» (couples), иначе бэкенд
+    // недосчитает и цена разойдётся. Порядок должен совпадать с бэкендом.
+    const key = `build_${qty.std}_${qty.v2}_${qty.pro}_${qty.family}_${qty.video}_${qty.couples}`
     onBuy(key)
   }
 
