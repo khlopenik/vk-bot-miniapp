@@ -170,11 +170,10 @@ export default function App() {
   const [genPreset, setGenPreset] = useState(null)
   const [galleryStyle, setGalleryStyle] = useState(null) // экран генерации из галереи
   const [toastMsg, showToast] = useToast()
-  // ⚠️ ВРЕМЕННО: оплата включена на ВСЕХ платформах (в т.ч. мобильных) через ЮKassa,
-  // чтобы клиенты могли покупать, пока VK не активировал монетизацию для VK Pay.
-  // Когда VK Pay заработает — вернуть логику по vk_platform (web → true, натив → false)
-  // и подключить нативную оплату VK на мобильных. См. память project-vk-pay-migration.
-  const PAYMENTS_MOBILE_ENABLED = true
+  // Оплата разрешена только на vk.ru/m.vk.ru (правило VK 5.4.1). На нативных iOS/Android
+  // оплата и любые подсказки о ней скрыты. Флаг оставлен, чтобы при подключении VK Pay
+  // можно было снова включить оплату на мобильных (уже нативную). См. project-vk-pay-migration.
+  const PAYMENTS_MOBILE_ENABLED = false
   const detectCanPay = () => {
     try {
       const p = new URLSearchParams(window.location.search).get('vk_platform') || ''
@@ -214,9 +213,8 @@ export default function App() {
     bridge.send('VKWebAppGetLaunchParams')
       .then(p => {
         if (p?.hash) handleHash(p.hash)
-        // ⚠️ ВРЕМЕННО отключено: пока оплата включена на всех платформах (PAYMENTS_MOBILE_ENABLED).
-        // Когда вернём VK Pay — раскомментировать:
-        // if (p?.vk_platform) setCanPay(String(p.vk_platform).includes('web'))
+        // Уточняем платформу от bridge: web (vk.ru/m.vk.ru) → оплата можно, натив → нельзя.
+        if (!PAYMENTS_MOBILE_ENABLED && p?.vk_platform) setCanPay(String(p.vk_platform).includes('web'))
       })
       .catch(() => {})
 
