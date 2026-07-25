@@ -35,6 +35,7 @@ export const api = {
   // pay: Render cold start ~30 сек → timeout 60 сек
   pay: (vk_id, tariff) => req('/pay', { method: 'POST', body: JSON.stringify({ vk_id, tariff }) }, 60000),
   support: (vk_id, kind) => req('/support', { method: 'POST', body: JSON.stringify({ vk_id, kind }) }),
+  promo: (vk_id, code) => req('/promo', { method: 'POST', body: JSON.stringify({ vk_id, code }) }, 60000),
   generate: (vk_id, photo_url, model_key, prompt, size = 'vert') =>
     req('/generate', { method: 'POST', body: JSON.stringify({ vk_id, photo_url, model_key, prompt, size }) }, 120000),
   // Семейный multi: массив отдельных фото (по человеку) → gpt4o images_list

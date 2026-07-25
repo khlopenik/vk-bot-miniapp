@@ -1520,9 +1520,21 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
       .catch(() => showToast('Скопируй ссылку вручную'))
   }
 
-  const applyPromo = () => {
-    if (!promo.trim()) return
-    setPromoMsg({ ok: false, msg: 'Промокод не найден' })
+  const applyPromo = async () => {
+    if (!promo.trim() || !vkId) return
+    setPromoMsg({ ok: true, msg: '⏳ Проверяем...' })
+    try {
+      const r = await api.promo(vkId, promo.trim())
+      if (r.ok) {
+        setPromoMsg({ ok: true, msg: r.msg || '✅ Промокод активирован!' })
+        setPromo('')
+        onRefresh?.()
+      } else {
+        setPromoMsg({ ok: false, msg: r.msg || 'Промокод не найден' })
+      }
+    } catch (e) {
+      setPromoMsg({ ok: false, msg: e?.message?.includes('timeout') ? 'Сервер загружается, повтори через 30 сек' : 'Промокод не найден' })
+    }
   }
 
   const handleBecomePartner = () => {
@@ -1557,10 +1569,8 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
           </div>
         </div>
 
-        {canPay && <>
-        <button className="big-btn purple" onClick={onGoTariffs}>💳 Пополнить баланс</button>
-
-        {/* Promo */}
+        {/* Promo — показываем на ВСЕХ платформах: это бесплатные кредиты (не оплата),
+            нужно для тестировщиков VK и промо-акций. Правило 5.4.1 не нарушает. */}
         <div className="bal-card" style={{marginTop:0}}>
           <div style={{fontSize:13,fontWeight:700,color:'#f97316',marginBottom:10}}>🎫 Промокод</div>
           <div style={{display:'flex',gap:8,alignItems:'center'}}>
@@ -1577,6 +1587,9 @@ function ProfileTab({ vkId, me: meProp, onGoTariffs, onGoProfile, showToast, onR
             <div style={{fontSize:13,color: promoMsg.ok ? '#4ade80' : '#f87171',marginTop:8}}>{promoMsg.msg}</div>
           )}
         </div>
+
+        {canPay && <>
+        <button className="big-btn purple" onClick={onGoTariffs}>💳 Пополнить баланс</button>
 
         {/* Referral — бонус для друзей: фото на баланс, не деньги */}
         <div className="ref-box">
