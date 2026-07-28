@@ -1,4 +1,4 @@
-export const API_BASE = 'https://vk-bot-2vns.onrender.com/api'
+export const API_BASE = 'https://vk-bot-kkkhhl.amvera.io/api'
 
 async function req(path, opts = {}, timeoutMs = 25000) {
   const ctrl = new AbortController()
